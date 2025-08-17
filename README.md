@@ -22,7 +22,7 @@ To run the application locally for development, use `uvicorn` with auto-reloadin
 uvicorn src.insurance_quotes.main:app --reload
 ```
 
-The API will be available at `http://127.0.0.1:8000`. You can access the interactive API documentation (Swagger UI) at `http://127.0.0.1:8000/docs`.
+The API will be available at `http://127.0.0.1:8002`. You can access the interactive API documentation (Swagger UI) at `http://127.0.0.1:8002/docs`.
 
 ### API Endpoints
 *   **Health Check:** `GET /health` - Returns `{"status": "ok"}` if the service is running.
