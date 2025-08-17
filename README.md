@@ -17,6 +17,8 @@ Provides insurance quotes for a given insurance policy information for a given i
 ## Running the Service
 
 To run the application locally you can launch main.py in debug mode pointing to local .env file.
+
+
 To run the application locally for development, use `uvicorn` with auto-reloading:
 
 ```bash
