@@ -1,0 +1,1 @@
+# This file makes src/insurance_quotes/app a Python package.
