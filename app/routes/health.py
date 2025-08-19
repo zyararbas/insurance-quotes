@@ -6,12 +6,12 @@ from app.services.health_service import (
     get_health_service,
 )
 
-router = APIRouter(prefix="/health", tags=["Health"])
+router = APIRouter()
 
 class HealthResponse(BaseModel):
     status: str
 
-@router.get("", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse)
 async def health_check(health_service: HealthService = Depends(get_health_service)):
     """
     Checks the health of the service by delegating to the HealthService.

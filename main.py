@@ -1,16 +1,32 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.routes import health, insurance_quotes
 
-from app.routes import health
 
 app = FastAPI(
     title="Insurance Quotes API",
     description="Provides insurance quotes for a given insurance policy information for a given insurance carriers",
     version="0.1.0",
 )
+# Configure CORS
+origins = [
+    "http://localhost:8001",  # Add your frontend's origin here
+    # "https://your-production-frontend.com", # Add other allowed origins
+]
+# CORS Middleware (if you need to enable CORS for external requests)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allows all origins; customize this for security in production
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all HTTP methods
+    allow_headers=["*"],  # Allows all headers
+) 
+API_PREFIX = "/insurance-quotes"
+# Include the policy routes
+app.include_router(health.router, prefix=API_PREFIX,tags=["Auto Insurance Quote Management Health"])
+app.include_router(insurance_quotes.router, prefix=API_PREFIX, tags=["Insurance Quotes"])
 
-app.include_router(health.router)
-
-@app.get("/")
+@app.get("/insurance-quotes")
 async def root():
     return {"message": "Welcome to the Insurance Quotes API"}
 
