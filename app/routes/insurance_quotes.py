@@ -32,4 +32,5 @@ async def create_quote(payload: dict):
     """
     # For demonstration, we'll just echo the input data back.
     # A real implementation would have business logic here.
+    print([payload])
     return {"output": payload}
