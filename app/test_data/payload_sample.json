@@ -1,0 +1,291 @@
+[
+  {
+    "policy_number": "CAAS102222467",
+    "start_date": "2025-04-30",
+    "end_date": "2026-04-30",
+    "policy_details": {
+      "success": true,
+      "data": {
+        "policy": {
+          "policyNumber": "CAAS102222467",
+          "policyId": "CAAS102222467_2025-04-30_2026-04-30",
+          "startDate": "2025-04-30",
+          "endDate": "2026-04-30",
+          "totalPremium": "$6,194.28",
+          "carrier": "aaa",
+          "documentType": "AUTO_INSURANCE_POLICY",
+          "mainAddress": "749 DELAWARE AVE SAN JOSE, CA 95123-5418"
+        },
+        "company": {
+          "name": "CSAA Insurance Exchange",
+          "address": "P.O.Box 22221 Oakland, CA 94623-2221",
+          "supportCallNumber": "800.922.8228"
+        },
+        "drivers": [
+          {
+            "givenName": "Aykut",
+            "familyName": "Yararbas"
+          },
+          {
+            "givenName": "Onur",
+            "familyName": "None",
+            "additionalName": "Tuna"
+          },
+          {
+            "givenName": "Onur",
+            "familyName": "Tuna"
+          },
+          {
+            "givenName": "Onur",
+            "familyName": "Yararbas",
+            "additionalName": "Tuna"
+          },
+          {
+            "givenName": "Zubeyde",
+            "familyName": "Yararbas"
+          }
+        ],
+        "vehicles": [
+          {
+            "vehicleMake": "AUDI",
+            "modelYear": "2011",
+            "vehicleIdentificationNumber": "WA1DKAFP2BA076333",
+            "bodyType": "WAGON 4 DOOR",
+            "itemNumber": 1
+          },
+          {
+            "vehicleMake": "RIVIAN",
+            "modelYear": "2025",
+            "vehicleIdentificationNumber": "7PDSGBBA9SN063117",
+            "bodyType": "SUV",
+            "itemNumber": 2
+          },
+          {
+            "vehicleMake": "TOYOTA",
+            "modelYear": "2002",
+            "vehicleIdentificationNumber": "1NXBR12E62Z573165",
+            "bodyType": "SEDAN 4 DOOR",
+            "itemNumber": 3
+          }
+        ],
+        "coverages": [
+          {
+            "coverageName": "All Risks",
+            "limitPerPerson": "Actual Cash Value Less Deductible"
+          },
+          {
+            "coverageName": "Bodily Injury",
+            "limitPerPerson": "500,000",
+            "limitPerOccurrence": "500,000"
+          },
+          {
+            "coverageName": "Collision",
+            "limitPerPerson": "Actual Cash Value Less Deductible"
+          },
+          {
+            "coverageName": "Comprehensive",
+            "limitPerPerson": "Actual Cash Value Less Deductible"
+          },
+          {
+            "coverageName": "Full Comprehensive Safety Glass Endorsement",
+            "limitPerPerson": "($0 deductible)"
+          },
+          {
+            "coverageName": "Medical Payments",
+            "limitPerPerson": "25,000"
+          },
+          {
+            "coverageName": "Property Damage",
+            "limitPerPerson": "100,000"
+          },
+          {
+            "coverageName": "Rental Car Reimbursement Coverage",
+            "limitPerPerson": "$ Limit per day / max days"
+          },
+          {
+            "coverageName": "Uninsured Motorist Property Damage",
+            "limitPerPerson": "3,500"
+          },
+          {
+            "coverageName": "Uninsured Motorists",
+            "limitPerPerson": "300,000",
+            "limitPerOccurrence": "500,000"
+          }
+        ],
+        "vehicleCoverages": [
+          {
+            "vehicleItemNumber": 1,
+            "premiumAmount": "$257",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 1,
+            "premiumAmount": "$33",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 1,
+            "premiumAmount": "$367",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 1,
+            "premiumAmount": "$93",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 1,
+            "coverageStatus": "Included"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "deductibleLimit": "$50/30",
+            "premiumAmount": "$52",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "deductibleLimit": "1,000",
+            "premiumAmount": "$1,153",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "deductibleLimit": "1,000",
+            "premiumAmount": "$328",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "premiumAmount": "$102",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "premiumAmount": "$148",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "premiumAmount": "$223",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "premiumAmount": "$25",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "premiumAmount": "$395",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 2,
+            "coverageStatus": "Included"
+          },
+          {
+            "vehicleItemNumber": 3,
+            "premiumAmount": "$1,161",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 3,
+            "premiumAmount": "$1,168",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 3,
+            "premiumAmount": "$146",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 3,
+            "premiumAmount": "$538",
+            "coverageStatus": "Active"
+          },
+          {
+            "vehicleItemNumber": 3,
+            "coverageStatus": "Included"
+          }
+        ],
+        "discounts": [
+          {
+            "discountName": "Good Driver"
+          },
+          {
+            "discountName": "Good Student"
+          },
+          {
+            "discountName": "Mature Driver"
+          },
+          {
+            "discountName": "Multi Car"
+          },
+          {
+            "discountName": "Multi Policy Home"
+          },
+          {
+            "discountName": "New Driver"
+          }
+        ],
+        "surcharges": [
+          {
+            "surchargeName": "CA Special Fraud Assessment Fee",
+            "surchargeAmount": "$5.28"
+          },
+          {
+            "surchargeName": "CA Surcharge",
+            "surchargeAmount": "$0"
+          }
+        ],
+        "_metadata": {
+          "source": "triplestore",
+          "query_type": "direct_sparql_to_json",
+          "policy_number": "CAAS102222467",
+          "retrieved_at": "\"2025-08-22 00:25:42.296326\""
+        }
+      }
+    },
+    "additional_info": {
+      "drivers": [
+        {
+          "firstName": "Aykut",
+          "middleName": "",
+          "lastName": "Yararbas",
+          "dob": "01/01/2001",
+          "gender": "Male",
+          "education": "Master's Degree",
+          "ageLicensed": "18"
+        },
+        {
+          "firstName": "Zubeyde",
+          "middleName": "",
+          "lastName": "Yararbas",
+          "dob": "01/01/2001",
+          "gender": "Female",
+          "ageLicensed": "18",
+          "education": "Bachelor's Degree"
+        },
+        {
+          "firstName": "Onur",
+          "middleName": "",
+          "lastName": "Tuna",
+          "dob": "10/01/2003",
+          "gender": "Male",
+          "ageLicensed": "21",
+          "education": "Doctorate"
+        }
+      ],
+      "vehicles": [
+        
+      ],
+      "addManualDriverConsent": "No",
+      "housingType": "Own Home",
+      "housingDuration": "Yes",
+      "insuredDuration": "3+ yrs",
+      "accidentsOrTickets": "No",
+      "addVehiclesConsent": "No"
+    }
+  }
+]
