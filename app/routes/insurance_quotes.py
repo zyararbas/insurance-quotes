@@ -23,7 +23,7 @@ class GenericResponse(BaseModel):
 
 
 @router.post("/quotes", response_model=GenericResponse, tags=["Insurance Quotes"])
-async def create_quote(request: GenericRequest):
+async def create_quote(payload: dict):
     """
     Accepts a generic JSON input and returns a generic JSON output.
 
@@ -32,4 +32,4 @@ async def create_quote(request: GenericRequest):
     """
     # For demonstration, we'll just echo the input data back.
     # A real implementation would have business logic here.
-    return {"output": request.data}
+    return {"output": payload}
