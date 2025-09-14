@@ -1,0 +1,4 @@
+automobile_use,usage_type_code,bipd_factor,coll_factor,comp_factor,mpc_factor,um_factor
+Farm,3,0.865,0.848,0.86,0.907,1.056
+Pleasure / Work / School,1,1,1,1,1,1
+Business,2,1.257,0.918,0.936,0.917,0.975

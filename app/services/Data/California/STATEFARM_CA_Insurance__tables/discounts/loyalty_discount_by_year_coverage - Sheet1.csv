@@ -1,0 +1,6 @@
+tenure_years,bipd_factor,coll_factor,comp_factor,mpc_factor,um_factor
+Less than 3 years,0,0,0,0,0
+3 Years,0.11,0.1,0.08,0.04,0.09
+4 Years,0.15,0.12,0.12,0.12,0.12
+5 Years,0.17,0.17,0.21,0.17,0.15
+6 Years,0.24,0.25,0.29,0.33,0.29

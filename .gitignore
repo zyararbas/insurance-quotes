@@ -50,3 +50,6 @@ coverage.xml
 env/
 venv/
 ENV/
+
+# webapp
+app/webapp/* 

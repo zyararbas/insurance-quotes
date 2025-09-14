@@ -1,0 +1,6 @@
+additional_policies,discount,lookup_value
+"Life or Health Insurance",0.04,1
+"Manufactured Home or Renter's Policy",0.09,2
+"Manufactured Home/Renter's Policy + Personal Umbrella",0.16,3
+"Condo, Homeowners, or Farm/Ranch Policy",0.21,4
+"Condo/Homeowners/Farm-Ranch Policy + Personal Umbrella",0.28,5
