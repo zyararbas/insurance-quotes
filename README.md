@@ -29,3 +29,24 @@ The API will be available at `http://127.0.0.1:8002`. You can access the interac
 
 ### API Endpoints
 *   **Health Check:** `GET /health` - Returns `{"status": "ok"}` if the service is running.
+
+
+3. ## Docker
+a. ### Building
+
+cd project_root
+docker build -t insurance-quotes .
+
+
+docker buildx build --platform linux/amd64 -t insurance-quotes
+docker tag insurance-quotes:latest 889572107296.dkr.ecr.us-west-1.amazonaws.com/insurance-quotes-app:latest
+aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin  889572107296.dkr.ecr.us-west-1.amazonaws.com
+docker push 889572107296.dkr.ecr.us-west-1.amazonaws.com/insurance-quotes-app:latest
+
+b. ### Launching
+docker run -p 8002:8002 --network coveragecompassnetwork  --env-file .env insurance-quotes
+
+Bashing into 
+docker run -it --name insurance-quotes bash s
+
+

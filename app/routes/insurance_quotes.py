@@ -1,16 +1,28 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional, List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from app.services.py_pricing_service.models.models import RatingInput  # type: ignore
 from app.services.py_pricing_service.services.new_pricing_orchestrator import NewPricingOrchestrator  # type: ignore
+from app.services.py_pricing_service.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 from fastapi import HTTPException
+
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class Vehicle(BaseModel):
+    year: int
+    make: str
+    model: str
+    series: Optional[str] = ""
+    package: Optional[str] = ""
+    style: Optional[str] = ""
+    engine: Optional[str] = ""
 
 
 class GenericRequest(BaseModel):
@@ -37,6 +49,9 @@ CARRIER_CONFIG = {
         # ... other config ...
     }
 }
+
+vehicleLookupService = VehicleLookupService()
+
 
 @router.post("/quotes", response_model=GenericResponse, tags=["Insurance Quotes"])
 async def create_quote(payload: dict):
@@ -76,3 +91,33 @@ def calculate_premium(rating_input: RatingInput):
         logger.error(f"An error occurred during premium calculation: {e}", exc_info=True)
         # Re-raise as an HTTPException to be sent to the client
         raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+
+
+@router.post("/get_vehicle_ratings")
+def getVehicleRatings(vehicles: List[Vehicle]):
+    """
+    Accepts a list of vehicles and returns their corresponding rating groups.
+    """
+    logger.info(f"--- Vehicle Ratings Request for {len(vehicles)} vehicles ---")
+    
+    try:
+        ratings = []
+        for vehicle in vehicles:
+            logger.info(f"Looking up ratings for: {vehicle.year} {vehicle.make} {vehicle.model}")
+            rating_groups = vehicleLookupService.get_rating_groups(
+                year=vehicle.year,
+                make=vehicle.make,
+                model=vehicle.model,
+                series=vehicle.series or "",
+                package=vehicle.package or "",
+                style=vehicle.style or "",
+                engine=vehicle.engine or ""
+            )
+            ratings.append({"vehicle": vehicle, "ratings": rating_groups}) 
+        
+        logger.info(f"Found ratings for {len(ratings)} vehicles.")
+        return {"data": ratings}
+        
+    except Exception as e:
+        logger.error(f"An error occurred during vehicle lookup: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred during vehicle lookup.")
