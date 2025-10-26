@@ -1,13 +1,13 @@
 import logging
 from typing import Dict
-from app.services.py_pricing_service.models.models import RatingInput
-from app.services.py_pricing_service.services.aggregation_services.coverage_calculation_aggregator import CoverageCalculationAggregator
+from models.models import RatingInput
+from services.aggregation_services.coverage_calculation_aggregator import CoverageCalculationAggregator
 
 logger = logging.getLogger(__name__)
 
-class NewPricingOrchestrator:
+class PricingOrchestrator:
     """
-    New pricing orchestrator that uses the microservices architecture.
+    Pricing orchestrator that uses the microservices architecture.
     This orchestrator coordinates the individual lookup services and aggregation services
     for better isolation and maintainability.
     """
@@ -19,7 +19,7 @@ class NewPricingOrchestrator:
     def initialize(self):
         """Initializes all underlying services."""
         self.coverage_calculator.initialize()
-        logger.info("NewPricingOrchestrator initialized")
+        logger.info("PricingOrchestrator initialized")
         
     def calculate_premium(self, rating_input: RatingInput) -> Dict:
         """

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, conint, constr
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict
 from datetime import date
 
 class Vehicle(BaseModel):
@@ -58,6 +58,14 @@ class Usage(BaseModel):
     annual_mileage: conint(ge=0)
     type: Literal['Pleasure / Work / School', 'Business', 'Farm'] = 'Pleasure / Work / School'
     single_automobile: bool = False
+
+class ComprehensiveVehicleSearchRequest(BaseModel):
+    vin: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    additional_info: Optional[str] = None
+    conversation_history: Optional[List[Dict[str, str]]] = None
 
 class RatingInput(BaseModel):
     carrier: constr(strip_whitespace=True, to_upper=True)

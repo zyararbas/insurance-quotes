@@ -55,4 +55,43 @@ venv/
 ENV/
 
 # webapp
-app/webapp/* 
+app/webapp/*
+
+# Data Analysis folder - contains generated reports and analysis files
+Data_Analysis/
+
+# Test scripts and temporary files
+test_*.py
+*_test.py
+temp_*.py
+debug_*.py
+
+# API keys and sensitive configuration
+*.key
+*.pem
+.env.local
+.env.production
+config/secrets.json
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+logs/
+temp/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db 

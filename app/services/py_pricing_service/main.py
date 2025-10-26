@@ -1,9 +1,14 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from models.models import RatingInput
-from services.new_pricing_orchestrator import NewPricingOrchestrator
+from models.models import RatingInput, ComprehensiveVehicleSearchRequest
+from services.calculations.pricing_orchestrator import PricingOrchestrator
+from services.vehicle_search.vehicle_spec_orchestrator import VehicleSpecOrchestrator
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any, List
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -58,7 +63,7 @@ def calculate_premium(rating_input: RatingInput):
         if not carrier_config:
             raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
 
-        orchestrator = NewPricingOrchestrator(carrier_config)
+        orchestrator = PricingOrchestrator(carrier_config)
         result = orchestrator.calculate_premium(rating_input)
         
         logger.info("--- Final Calculation Output ---")
@@ -425,7 +430,7 @@ def calculate_safety_record(driver_data: dict):
     logger.info(f"--- Safety Record Calculation Request: {driver_data} ---")
     
     try:
-        from services.safety_record_service import SafetyRecordService
+        from services.calculations.safety_record_service import SafetyRecordService
         from services.lookup_services.driver_factor_lookup_service import DriverFactorLookupService
         from models.models import Driver, Violation
         from datetime import datetime
@@ -560,6 +565,190 @@ def get_percentage_use_factors(
         logger.error(f"An error occurred while getting percentage use factors: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred while getting percentage use factors.")
 
+@app.get("/vehicle-search/")
+def search_vehicles(
+    vin: Optional[str] = Query(None, description="17-character Vehicle Identification Number"),
+    make: Optional[str] = Query(None, description="Vehicle make (partial match, case-insensitive)"),
+    model: Optional[str] = Query(None, description="Vehicle model (partial match, case-insensitive)"),
+    year: Optional[int] = Query(None, description="Vehicle year (exact match)")
+):
+    """
+    Search for vehicles using either VIN or Make/Model/Year combination.
+    Returns all matching vehicles with their details and rating groups.
+    """
+    logger.info(f"--- Vehicle Search Request: vin='{vin}', make='{make}', model='{model}', year='{year}' ---")
+    
+    try:
+        from services.vehicle_search.vehicle_search_service import VehicleSearchService
+        
+        # Check if VIN search is requested
+        if vin:
+            if len(vin.strip()) != 17:
+                raise HTTPException(status_code=400, detail="VIN must be exactly 17 characters long")
+            
+            # Use VIN lookup service
+            vin_service = VINLookupService()
+            vin_data = vin_service.lookup_and_format_vin(vin.strip().upper())
+            
+            if 'error' in vin_data:
+                raise HTTPException(status_code=400, detail=vin_data['error'])
+            
+            # Convert VIN data to vehicle search format
+            vehicle_service = VehicleSearchService()
+            results = vehicle_service.search_vehicles(
+                make=vin_data.get('make'),
+                model=vin_data.get('model'),
+                year=int(vin_data.get('year')) if vin_data.get('year') else None
+            )
+            
+            # Add VIN information to results
+            for vehicle in results:
+                vehicle['vin'] = vin
+                vehicle['vin_lookup_data'] = vin_data
+            
+            logger.info(f"VIN-based vehicle search found {len(results)} matches")
+            return {"vehicles": results, "search_type": "vin", "vin_data": vin_data}
+        
+        # Traditional Make/Model/Year search
+        else:
+            # Validate that at least one search criteria is provided
+            if not make and not model and not year:
+                raise HTTPException(status_code=400, detail="Either VIN or at least one search criteria is required (make, model, or year)")
+            
+            vehicle_service = VehicleSearchService()
+            results = vehicle_service.search_vehicles(make=make, model=model, year=year)
+            
+            logger.info(f"Traditional vehicle search found {len(results)} matches")
+            return {"vehicles": results, "search_type": "traditional"}
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"An error occurred during vehicle search: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred during vehicle search.")
+
+@app.get("/vin-lookup/")
+def lookup_vin(
+    vin: str = Query(..., description="17-character Vehicle Identification Number")
+):
+    """
+    Look up vehicle information using a VIN from the NHTSA vPIC API.
+    Returns detailed vehicle information including make, model, year, and specifications.
+    """
+    logger.info(f"--- VIN Lookup Request: {vin} ---")
+    
+    try:
+        from services.vehicle_search.vehicle_search_service import VehicleSearchService
+        service = VehicleSearchService()
+        
+        # Validate VIN format
+        if not vin or len(vin.strip()) != 17:
+            raise HTTPException(status_code=400, detail="VIN must be exactly 17 characters long")
+        
+        # Perform VIN lookup using the search service
+        result = service.search_by_vin_only(vin.strip().upper())
+        
+        if 'error' in result:
+            logger.error(f"VIN lookup failed: {result['error']}")
+            raise HTTPException(status_code=400, detail=result['error'])
+        
+        logger.info(f"VIN lookup successful for VIN: {vin}")
+        return result
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"An error occurred during VIN lookup: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred during VIN lookup.")
+
+@app.post("/ai-interpret-vehicle-results/")
+def interpret_vehicle_results(
+    vin_data: Optional[Dict[str, Any]] = None,
+    search_results: List[Dict[str, Any]] = None,
+    additional_info: str = "",
+    conversation_history: List[Dict[str, str]] = None
+):
+    """
+    Use OpenAI AI assistant to interpret vehicle search results and find the best match.
+    Returns either an exact match or follow-up questions to narrow down the selection.
+    """
+    logger.info(f"--- AI Vehicle Interpretation Request ---")
+    logger.info(f"Results: {len(search_results) if search_results else 0}")
+    
+    try:
+        from services.vehicle_search.ai_assistant_service import AIAssistantService
+        
+        # Validate inputs
+        if not search_results:
+            raise HTTPException(status_code=400, detail="search_results is required")
+        
+        if len(search_results) == 0:
+            return {
+                "questions": ["Could you provide more details about the vehicle?"]
+            }
+        
+        # Initialize AI service (OpenAI only)
+        ai_service = AIAssistantService(provider="openai")
+        
+        # Get AI interpretation
+        result = ai_service.interpret_vehicle_results(
+            vin_data=vin_data,
+            search_results=search_results,
+            additional_info=additional_info,
+            conversation_history=conversation_history
+        )
+        
+        logger.info(f"AI interpretation completed: match_found={result.get('match') is not None}")
+        return result
+        
+    except ValueError as e:
+        logger.error(f"Configuration error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"An error occurred during AI interpretation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred during AI interpretation.")
+
+@app.get("/ai-test-connection/")
+def test_ai_connection():
+    """
+    Test the OpenAI AI assistant API connection.
+    """
+    logger.info(f"--- OpenAI Connection Test ---")
+    
+    try:
+        from services.vehicle_search.ai_assistant_service import AIAssistantService
+        
+        ai_service = AIAssistantService(provider="openai")
+        result = ai_service.test_connection()
+        
+        logger.info(f"AI connection test result: {result['status']}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"AI connection test failed: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "provider": ai_provider,
+            "error": str(e)
+        }
+
+@app.get("/ai-supported-providers/")
+def get_supported_ai_providers():
+    """
+    Get list of supported AI providers.
+    """
+    try:
+        from services.vehicle_search.ai_assistant_service import AIAssistantService
+        return {
+            "providers": AIAssistantService().get_supported_providers(),
+            "default": "openai"
+        }
+    except Exception as e:
+        logger.error(f"Error getting supported providers: {e}")
+        return {"providers": [], "error": str(e)}
+
 @app.get("/single-auto-factors/")
 def get_single_auto_factors(
     single_auto: bool = Query(..., description="Whether this is a single automobile policy")
@@ -598,7 +787,7 @@ def test_driver_adjustment(rating_input: RatingInput):
         if not carrier_config:
             raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
 
-        orchestrator = NewPricingOrchestrator(carrier_config)
+        orchestrator = PricingOrchestrator(carrier_config)
         result = orchestrator.get_driver_adjustment_factors(rating_input)
         
         logger.info("--- Driver Adjustment Test Results ---")
@@ -622,7 +811,7 @@ def test_coverage_breakdown(coverage: str = Query(..., description="Coverage to 
         if not carrier_config:
             raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
 
-        orchestrator = NewPricingOrchestrator(carrier_config)
+        orchestrator = PricingOrchestrator(carrier_config)
         result = orchestrator.get_coverage_breakdown(coverage, rating_input)
         
         logger.info(f"--- Coverage Breakdown Test Results for {coverage} ---")
@@ -646,7 +835,7 @@ def test_individual_factors(rating_input: RatingInput):
         if not carrier_config:
             raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
 
-        orchestrator = NewPricingOrchestrator(carrier_config)
+        orchestrator = PricingOrchestrator(carrier_config)
         result = orchestrator.get_individual_factors(rating_input)
         
         logger.info("--- Individual Factors Test Results ---")
@@ -657,6 +846,87 @@ def test_individual_factors(rating_input: RatingInput):
         logger.error(f"An error occurred during individual factors test: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
 
+
+@app.post("/comprehensive-vehicle-match/")
+def comprehensive_vehicle_match(request: ComprehensiveVehicleSearchRequest):
+    """
+    Comprehensive API endpoint that handles the complete flow from VIN/manual input to final match.
+    
+    This endpoint uses the ComprehensiveVehicleSearchService to:
+    1. Perform VIN lookup if VIN is provided
+    2. Search for vehicles based on make/model/year
+    3. Use AI to find exact match or generate questions
+    4. Return either a confirmed match or questions to narrow down
+    """
+    try:
+        # Initialize the vehicle spec orchestrator
+        orchestrator = VehicleSpecOrchestrator()
+        
+        # Process the vehicle search request
+        result = orchestrator.process_vehicle_request(
+            vin=request.vin,
+            make=request.make,
+            model=request.model,
+            year=request.year,
+            additional_info=request.additional_info,
+            conversation_history=request.conversation_history
+        )
+        
+        # Handle error responses
+        if result.get('error'):
+            status_code = 400 if result.get('status') in ['incomplete_criteria', 'no_results'] else 500
+            raise HTTPException(status_code=status_code, detail=result['error'])
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Comprehensive vehicle match failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+
+
+@app.post("/vehicle-spec-orchestrator/")
+def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
+    """
+    Vehicle Spec Orchestrator API endpoint that handles the complete flow with detailed step tracking.
+    
+    This endpoint uses the VehicleSpecOrchestrator to:
+    1. Perform VIN lookup if VIN is provided
+    2. Search for vehicles based on make/model/year
+    3. Deduplicate vehicle specifications
+    4. Use AI to find exact match or generate questions
+    5. Return detailed step-by-step results
+    """
+    try:
+        # Import the VehicleSpecOrchestrator
+        from services.vehicle_search.vehicle_spec_orchestrator import VehicleSpecOrchestrator
+        
+        # Initialize the orchestrator
+        orchestrator = VehicleSpecOrchestrator()
+        
+        # Process the vehicle specification request
+        result = orchestrator.process_vehicle_request(
+            vin=request.vin,
+            make=request.make,
+            model=request.model,
+            year=request.year,
+            additional_info=request.additional_info,
+            conversation_history=request.conversation_history
+        )
+        
+        # Handle error responses
+        if result.get('error'):
+            status_code = 400 if result.get('status') in ['incomplete_criteria', 'no_results'] else 500
+            raise HTTPException(status_code=status_code, detail=result['error'])
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Vehicle spec orchestrator failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
 
 
 # Server startup code

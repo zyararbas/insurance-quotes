@@ -1,8 +1,8 @@
 import logging
 from typing import Dict, List
-from app.services.py_pricing_service.models.models import Driver, Usage, Discounts
-from app.services.py_pricing_service.services.lookup_services.driver_factor_lookup_service import DriverFactorLookupService
-from app.services.py_pricing_service.services.safety_record_service import SafetyRecordService
+from models.models import Driver, Usage, Discounts
+from services.lookup_services.driver_factor_lookup_service import DriverFactorLookupService
+from services.calculations.safety_record_service import SafetyRecordService
 
 logger = logging.getLogger(__name__)
 

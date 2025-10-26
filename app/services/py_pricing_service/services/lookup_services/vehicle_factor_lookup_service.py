@@ -1,8 +1,8 @@
 import pandas as pd
 import logging
 from typing import Dict, List, Optional
-from app.services.py_pricing_service.utils.data_loader import DataLoader        
-from app.services.py_pricing_service.models.models import Vehicle, Usage
+from utils.data_loader import DataLoader        
+from models.models import Vehicle, Usage
 
 logger = logging.getLogger(__name__)
 

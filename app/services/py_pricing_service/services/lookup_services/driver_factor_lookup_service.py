@@ -1,9 +1,9 @@
 import pandas as pd
 import logging
 from typing import Dict, List, Optional
-from app.services.py_pricing_service.utils.data_loader import DataLoader
-from app.services.py_pricing_service.models.models import Driver, Usage, Discounts
-from app.services.py_pricing_service.services.discount_service import DiscountService
+from utils.data_loader import DataLoader
+from models.models import Driver, Usage, Discounts
+from services.calculations.discount_service import DiscountService
 
 logger = logging.getLogger(__name__)
 

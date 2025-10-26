@@ -1,5 +1,5 @@
-from app.services.py_pricing_service.models.graph_models import InsuranceGraphInput
-from app.services.py_pricing_service.models.models import RatingInput, Vehicle, Coverages, Coverage, Driver, Discounts, Usage, SpecialFactors
+from models.graph_models import InsuranceGraphInput
+from models.models import RatingInput, Vehicle, Coverages, Coverage, Driver, Discounts, Usage, SpecialFactors
 import re
 
 def transform_graph_to_rating_input(graph_input: InsuranceGraphInput) -> RatingInput:

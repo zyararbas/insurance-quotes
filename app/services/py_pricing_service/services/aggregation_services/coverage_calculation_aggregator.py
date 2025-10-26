@@ -1,10 +1,10 @@
 import logging
 from typing import Dict, List
-from app.services.py_pricing_service.models.models import RatingInput, Vehicle, Usage, Coverages
-from app.services.py_pricing_service.services.lookup_services.base_rate_lookup_service import BaseRateLookupService
-from app.services.py_pricing_service.services.lookup_services.vehicle_factor_lookup_service import VehicleFactorLookupService
-from app.services.py_pricing_service.services.lookup_services.coverage_factor_lookup_service import CoverageFactorLookupService
-from app.services.py_pricing_service.services.aggregation_services.driver_adjustment_aggregator import DriverAdjustmentAggregator
+from models.models import RatingInput, Vehicle, Usage, Coverages
+from services.lookup_services.base_rate_lookup_service import BaseRateLookupService
+from services.lookup_services.vehicle_factor_lookup_service import VehicleFactorLookupService
+from services.lookup_services.coverage_factor_lookup_service import CoverageFactorLookupService
+from services.aggregation_services.driver_adjustment_aggregator import DriverAdjustmentAggregator
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class CoverageCalculationAggregator:
         
         # Step 5: Calculate Discount Factors (separate from driver adjustment)
         logger.info("--- Step 5: Calculating Discount Factors ---")
-        from services.discount_service import DiscountService
+        from services.calculations.discount_service import DiscountService
         discount_service = DiscountService(self.carrier_config)
         discount_service.initialize()
         
