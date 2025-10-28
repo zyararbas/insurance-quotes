@@ -10,8 +10,8 @@ app = FastAPI(
 )
 # Configure CORS
 origins = [
-    "http://localhost:8001",  # Add your frontend's origin here
-    # "https://your-production-frontend.com", # Add other allowed origins
+    "http://localhost:8001",
+    "http://localhost:3000",
 ]
 # CORS Middleware (if you need to enable CORS for external requests)
 app.add_middleware(
@@ -21,6 +21,8 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all HTTP methods
     allow_headers=["*"],  # Allows all headers
 ) 
+
+
 API_PREFIX = "/insurance-quotes"
 # Include the policy routes
 app.include_router(health.router, prefix=API_PREFIX,tags=["Auto Insurance Quote Management Health"])

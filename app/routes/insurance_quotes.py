@@ -1,12 +1,13 @@
 from typing import Any, Dict, Optional, List
 
 from fastapi import APIRouter, Query
+from fastapi import HTTPException
+
 from pydantic import BaseModel
 
-from app.services.py_pricing_service.models.models import RatingInput  # type: ignore
-from app.services.py_pricing_service.services.new_pricing_orchestrator import NewPricingOrchestrator  # type: ignore
-from app.services.py_pricing_service.services.lookup_services.vehicle_lookup_service import VehicleLookupService
-from fastapi import HTTPException
+from app.models.models import ComprehensiveVehicleSearchRequest, RatingInput  # type: ignore
+from app.services.calculations.pricing_orchestrator import PricingOrchestrator
+from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 
 import logging
 
@@ -121,3 +122,142 @@ def getVehicleRatings(vehicles: List[Vehicle]):
     except Exception as e:
         logger.error(f"An error occurred during vehicle lookup: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An internal error occurred during vehicle lookup.")
+
+
+@router.post("/calculate-premium/")
+def calculate_premium(rating_input: RatingInput):
+    """
+    Calculates the insurance premium based on the provided rating input from the test page.
+    """
+    logger.info("--- Received Raw Request for /calculate-premium ---")
+    logger.info(rating_input.dict())
+    
+    try:
+        carrier_config = CARRIER_CONFIG.get(rating_input.carrier)
+        if not carrier_config:
+            raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
+
+        orchestrator = PricingOrchestrator(carrier_config)
+        result = orchestrator.calculate_premium(rating_input)
+        
+        logger.info("--- Final Calculation Output ---")
+        logger.info(result)
+        return result
+
+    except Exception as e:
+        logger.error(f"An error occurred during premium calculation: {e}", exc_info=True)
+        # Re-raise as an HTTPException to be sent to the client
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+
+
+@router.get("/vehicle-lookup/")
+def vehicle_lookup(
+    type: str = Query(..., description="The type of data to look up (e.g., 'years', 'makes', 'models')"),
+    year: Optional[int] = Query(None),
+    make: Optional[str] = Query(None),
+    model: Optional[str] = Query(None),
+    series: Optional[str] = Query(None),
+    package: Optional[str] = Query(None),
+    style: Optional[str] = Query(None),
+    engine: Optional[str] = Query(None)
+):
+    """
+    Provides vehicle data for cascading dropdowns on the frontend.
+    """
+    logger.info(f"--- Vehicle Lookup Request ---")
+    logger.info(f"Type: {type}, Year: {year}, Make: {make}, Model: {model}")
+    
+    try:
+        from services.lookup_services.vehicle_lookup_service import VehicleLookupService
+        service = VehicleLookupService()
+        data = []
+        if type == "years":
+            data = service.get_years()
+        elif type == "makes" and year is not None:
+            data = service.get_makes(year)
+        elif type == "models" and year is not None and make is not None:
+            data = service.get_models(year, make)
+        elif type == "series" and year is not None and make is not None and model is not None:
+            data = service.get_series(year, make, model)
+        elif type == "packages" and year is not None and make is not None and model is not None and series is not None:
+            data = service.get_packages(year, make, model, series)
+        elif type == "styles" and year is not None and make is not None and model is not None and series is not None and package is not None:
+            data = service.get_styles(year, make, model, series, package)
+        elif type == "engines" and year is not None and make is not None and model is not None and series is not None and package is not None and style is not None:
+            data = service.get_engines(year, make, model, series, package, style)
+        elif type == "ratings" and year is not None and make is not None and model is not None and series is not None and package is not None and style is not None and engine is not None:
+            data = service.get_rating_groups(year, make, model, series, package, style, engine)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid 'type' or missing required parameters.")
+            
+        logger.info(f"Found {len(data)} items for type '{type}'.")
+        return {"data": data}
+        
+    except Exception as e:
+        logger.error(f"An error occurred during vehicle lookup: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred during vehicle lookup.")
+
+
+@router.get("/coverage-limits/")
+def get_coverage_limits():
+    """
+    Returns all available coverage limits and deductible options for the frontend dropdowns.
+    """
+    logger.info("--- Coverage Limits Request ---")
+    
+    try:
+        from services.lookup_services.coverage_factor_lookup_service import CoverageFactorLookupService
+        service = CoverageFactorLookupService(CARRIER_CONFIG["STATEFARM"])
+        service.initialize()
+        data = service.get_all_coverage_limits()
+        
+        logger.info(f"Coverage limits loaded successfully.")
+        return data
+        
+    except Exception as e:
+        logger.error(f"An error occurred while loading coverage limits: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An internal error occurred while loading coverage limits.")
+
+
+@router.post("/vehicle-spec-orchestrator/")
+def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
+    """
+    Vehicle Spec Orchestrator API endpoint that handles the complete flow with detailed step tracking.
+    
+    This endpoint uses the VehicleSpecOrchestrator to:
+    1. Perform VIN lookup if VIN is provided
+    2. Search for vehicles based on make/model/year
+    3. Deduplicate vehicle specifications
+    4. Use AI to find exact match or generate questions
+    5. Return detailed step-by-step results
+    """
+    try:
+        # Import the VehicleSpecOrchestrator
+        from services.vehicle_search.vehicle_spec_orchestrator import VehicleSpecOrchestrator
+        
+        # Initialize the orchestrator
+        orchestrator = VehicleSpecOrchestrator()
+        
+        # Process the vehicle specification request
+        result = orchestrator.process_vehicle_request(
+            vin=request.vin,
+            make=request.make,
+            model=request.model,
+            year=request.year,
+            additional_info=request.additional_info,
+            conversation_history=request.conversation_history
+        )
+        
+        # Handle error responses
+        if result.get('error'):
+            status_code = 400 if result.get('status') in ['incomplete_criteria', 'no_results'] else 500
+            raise HTTPException(status_code=status_code, detail=result['error'])
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Vehicle spec orchestrator failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+
