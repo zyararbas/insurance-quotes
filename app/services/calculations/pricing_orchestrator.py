@@ -1,7 +1,7 @@
 import logging
 from typing import Dict
-from models.models import RatingInput
-from services.aggregation_services.coverage_calculation_aggregator import CoverageCalculationAggregator
+from app.models.models import RatingInput
+from app.services.aggregation_services.coverage_calculation_aggregator import CoverageCalculationAggregator
 
 logger = logging.getLogger(__name__)
 
