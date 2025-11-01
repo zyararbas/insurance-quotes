@@ -1,5 +1,5 @@
-from models.graph_models import InsuranceGraphInput
-from models.models import RatingInput, Vehicle, Coverages, Coverage, Driver, Discounts, Usage, SpecialFactors
+from app.models.graph_models import InsuranceGraphInput
+from app.models.models import RatingInput, Vehicle, Coverages, Coverage, Driver, Discounts, Usage, SpecialFactors
 import re
 
 def transform_graph_to_rating_input(graph_input: InsuranceGraphInput) -> RatingInput:

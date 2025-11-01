@@ -1,8 +1,8 @@
 import pandas as pd
 import logging
 from typing import Dict, List, Optional
-from utils.data_loader import DataLoader
-from models.models import Coverages
+from app.utils.data_loader import DataLoader
+from app.models.models import Coverages
 
 logger = logging.getLogger(__name__)
 
@@ -255,38 +255,40 @@ class CoverageFactorLookupService:
             self.initialize()
             
         results = {}
-        
+        logger.info(f"coverages : {coverages}")
         for coverage_code, coverage_details in coverages.dict().items():
-            if not coverage_details.get('selected'):
-                continue
+            if coverage_details:
+                if not coverage_details.get('selected'):
+                    logger.info(f"coverage_details : {coverage_details}")
+                    continue
+                    
+                # Get the limit or deductible
+                limit_or_deductible = None
+                if coverage_details.get('deductible') is not None:
+                    limit_or_deductible = str(coverage_details.get('deductible'))
+                elif coverage_details.get('limits') is not None:
+                    limit_or_deductible = str(coverage_details.get('limits'))
+                    
+                if limit_or_deductible is None:
+                    logger.warning(f"No limit or deductible found for {coverage_code}")
+                    continue
+       
+                # Get the appropriate rating group
+                rating_group = None
+                if coverage_code == "COLL":
+                    rating_group = vehicle_rating_groups.get('drg')
+                elif coverage_code == "COMP":
+                    rating_group = vehicle_rating_groups.get('grg')
+                    
+                # Get the coverage factor
+                factor = self.get_coverage_factor(coverage_code, limit_or_deductible, rating_group)
                 
-            # Get the limit or deductible
-            limit_or_deductible = None
-            if coverage_details.get('deductible') is not None:
-                limit_or_deductible = str(coverage_details.get('deductible'))
-            elif coverage_details.get('limits') is not None:
-                limit_or_deductible = str(coverage_details.get('limits'))
+                results[coverage_code] = {
+                    'factor': factor,
+                    'limit_or_deductible': limit_or_deductible,
+                    'rating_group': rating_group
+                }
                 
-            if limit_or_deductible is None:
-                logger.warning(f"No limit or deductible found for {coverage_code}")
-                continue
-                
-            # Get the appropriate rating group
-            rating_group = None
-            if coverage_code == "COLL":
-                rating_group = vehicle_rating_groups.get('drg')
-            elif coverage_code == "COMP":
-                rating_group = vehicle_rating_groups.get('grg')
-                
-            # Get the coverage factor
-            factor = self.get_coverage_factor(coverage_code, limit_or_deductible, rating_group)
-            
-            results[coverage_code] = {
-                'factor': factor,
-                'limit_or_deductible': limit_or_deductible,
-                'rating_group': rating_group
-            }
-            
-            logger.info(f"Coverage factor for {coverage_code}: {factor}")
-            
+                logger.info(f"Coverage factor for {coverage_code}: {factor}")
+ 
         return results

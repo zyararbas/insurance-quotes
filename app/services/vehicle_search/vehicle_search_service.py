@@ -1,7 +1,7 @@
-import logging
+import logging 
 import requests
 from typing import Dict, Any, List, Optional
-from services.lookup_services.vehicle_lookup_service import VehicleLookupService
+from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 from datetime import datetime
 
 logger = logging.getLogger(__name__)

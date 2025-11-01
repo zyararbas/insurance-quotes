@@ -1,9 +1,13 @@
 import pandas as pd
 import logging
 from typing import Dict, List, Optional
-from utils.data_loader import DataLoader
-from models.models import Driver, Usage, Discounts
-from services.calculations.discount_service import DiscountService
+from app.utils.data_loader import DataLoader
+from app.models.models import Driver, Usage, Discounts
+from app.services.calculations.discount_service import DiscountService
+from app.models.models import SpecialFactors
+from app.models.models import Usage
+from app.models.models import Driver
+
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +107,7 @@ class DriverFactorLookupService:
             coverages = ['BIPD', 'COLL', 'COMP', 'MPC', 'UM']
             factors = {}
             for coverage in coverages:
-                # Create a mock driver object
-                from models.models import Driver
+                # Create a mock driver object 
                 driver = Driver(
                     driver_id='temp',
                     years_licensed=years_licensed,
@@ -196,7 +199,6 @@ class DriverFactorLookupService:
             factors = {}
             for coverage in coverages:
                 # Create a mock driver object
-                from models.models import Driver
                 driver = Driver(
                     driver_id='temp',
                     years_licensed=years_licensed,
@@ -402,8 +404,7 @@ class DriverFactorLookupService:
             self.initialize()
             
         try:
-            # Create a mock usage object
-            from models.models import Usage
+            # Create a mock usage object 
             usage = Usage(
                 annual_mileage=10000,
                 type='Pleasure / Work / School',
@@ -498,8 +499,7 @@ class DriverFactorLookupService:
             self.initialize()
             
         try:
-            # Create a mock usage object
-            from models.models import Usage
+            # Create a mock usage object 
             usage = Usage(
                 annual_mileage=annual_mileage,
                 type='Pleasure / Work / School',
@@ -578,7 +578,7 @@ class DriverFactorLookupService:
             
         try:
             # Create a mock usage object
-            from models.models import Usage
+
             usage = Usage(
                 annual_mileage=10000,
                 type=usage_type,
@@ -626,7 +626,7 @@ class DriverFactorLookupService:
         try:
             # Use the existing DiscountService to calculate discount factors
             # We need to create a mock special_factors object since the method signature requires it
-            from models.models import SpecialFactors
+
             special_factors = SpecialFactors(
                 federal_employee=getattr(discounts, 'federal_employee', False),
                 transportation_network_company=getattr(discounts, 'transportation_network_company', False),

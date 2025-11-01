@@ -2,11 +2,11 @@ import pandas as pd
 import os
 from functools import lru_cache
 import logging
-
+from app.services.storage_service import StorageService
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+VEHICLE_RATES = "vehicle-rates"
 class DataLoader:
     """
     Handles loading and caching of insurance rating tables from CSV files.
@@ -16,6 +16,7 @@ class DataLoader:
         # Assumes the 'Data' directory is at the app level.
         self.base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'Data', 'California', 'STATEFARM_CA_Insurance__tables'))
         logger.info(f"DataLoader initialized with base path: {self.base_path}")
+        self.storage_service = StorageService()
         if not os.path.isdir(self.base_path):
             logger.warning(f"Data directory not found at expected path: {self.base_path}")
 
@@ -57,17 +58,26 @@ class DataLoader:
 
     def load_vehicle_ratings(self) -> pd.DataFrame:
         """Loads vehicle ratings groups."""
-        df = self.load_table('car_factors/vehicle_ratings_groups - Sheet1.csv')
-        # Create a standardized key for easy lookups, similar to the JS version
-        df['lookup_key'] = df.apply(
-            lambda row: self._create_vehicle_key(
-                row['year'], row['make'], row['model'],
-                row.get('series', ''), row.get('package', ''),
-                row.get('style', ''), row.get('engine', '')
-            ),
-            axis=1
-        )
-        return df.set_index('lookup_key')
+        # df = self.load_table('car_factors/vehicle_ratings_groups - Sheet1.csv')
+        try:
+            df = self.storage_service.get_collection_as_dataframe(VEHICLE_RATES)
+            # Standardize column names to lowercase
+            df.columns = df.columns.str.lower()
+
+            # Create a standardized key for easy lookups, similar to the JS version
+            df['lookup_key'] = df.apply(
+                lambda row: self._create_vehicle_key(
+                    row['year'], row['make'], row['model'],
+                    row.get('series', ''), row.get('package', ''),
+                    row.get('style', ''), row.get('engine', '')
+                ),
+                axis=1
+            )
+            return df.set_index('lookup_key')
+        except Exception as e:
+            logging.error(f"Vehicle rates could not be loaded {e}")
+            raise Exception(e)
+        
 
     def load_vehicle_ratings_groups(self) -> pd.DataFrame:
         """Loads vehicle ratings groups (alias for load_vehicle_ratings)."""

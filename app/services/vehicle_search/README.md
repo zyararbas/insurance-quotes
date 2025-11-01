@@ -35,7 +35,7 @@ vehicle_search/
 
 **Usage:**
 ```python
-from services.vehicle_search import VehicleSearchService
+from app.services.vehicle_search import VehicleSearchService
 
 search_service = VehicleSearchService()
 
@@ -68,7 +68,7 @@ result = search_service.search_vehicles(
 
 **Usage:**
 ```python
-from services.vehicle_search import AIAssistantService
+from app.services.vehicle_search import AIAssistantService
 
 ai_service = AIAssistantService(provider="openai")
 result = ai_service.interpret_vehicle_results(vin_data, search_results, additional_info)
@@ -85,7 +85,7 @@ result = ai_service.interpret_vehicle_results(vin_data, search_results, addition
 
 **Usage:**
 ```python
-from services.lookup_services.vehicle_lookup_service import VehicleLookupService
+from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 
 lookup_service = VehicleLookupService()
 results = lookup_service.search_vehicles(make="BMW", model="X3", year=2020)
@@ -102,7 +102,7 @@ results = lookup_service.search_vehicles(make="BMW", model="X3", year=2020)
 
 **Usage:**
 ```python
-from services.vehicle_search import VehicleSpecOrchestrator
+from app.services.vehicle_search import VehicleSpecOrchestrator
 
 orchestrator = VehicleSpecOrchestrator()
 
@@ -154,7 +154,7 @@ VIN Lookup Service → Search Results → Deduplication → AI Model → Result
 
 ### Import Services
 ```python
-from services.vehicle_search import (
+from app.services.vehicle_search import (
     VehicleSearchService,
     AIAssistantService,
     VehicleSpecOrchestrator
@@ -247,7 +247,7 @@ All conflict resolutions are logged with:
 ## Example: Complete Workflow
 
 ```python
-from services.vehicle_search import VehicleSpecOrchestrator
+from app.services.vehicle_search import VehicleSpecOrchestrator
 
 # Initialize orchestrator
 orchestrator = VehicleSpecOrchestrator()

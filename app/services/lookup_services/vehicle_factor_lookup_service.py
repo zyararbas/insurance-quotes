@@ -1,8 +1,8 @@
 import pandas as pd
 import logging
 from typing import Dict, List, Optional
-from utils.data_loader import DataLoader        
-from models.models import Vehicle, Usage
+from app.utils.data_loader import DataLoader        
+from app.models.models import Vehicle, Usage
 
 logger = logging.getLogger(__name__)
 

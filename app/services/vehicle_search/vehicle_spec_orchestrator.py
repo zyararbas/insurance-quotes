@@ -12,8 +12,8 @@ This service provides a clean API for all vehicle specification use cases.
 
 import logging
 from typing import Dict, Any, List, Optional
-from app.services.vehicle_search.vehicle_search_service import VehicleSearchService
-from app.services.vehicle_search.ai_assistant_service import AIAssistantService
+from app.services.vehicle_search.vehicle_search_service import VehicleSearchService 
+from app.services.vehicle_search.ai_assistant_service_gemini_sdk import AIAssistantServiceGeminiSDK
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class VehicleSpecOrchestrator:
     def __init__(self):
         """Initialize the vehicle specification orchestrator."""
         self.search_service = VehicleSearchService()
-        self.ai_service = AIAssistantService(provider="openai")
+        self.ai_service = AIAssistantServiceGeminiSDK()
         
         # Initialize services
         self._initialized = False

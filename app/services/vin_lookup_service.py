@@ -35,11 +35,9 @@ class VinLookupService:
         endpoint_url = f"{self.BASE_URL}{vin}?format=json"
 
         try:
-            logging.info(f"Sending VIN lookup request to: {endpoint_url}")
             response = requests.get(endpoint_url, timeout=15)
             response.raise_for_status()  # Raise an HTTPError for bad responses (4xx or 5xx)
 
-            logging.info(f"VIN lookup successful. Status Code: {response.status_code}")
             return response.json()
 
         except requests.exceptions.Timeout:

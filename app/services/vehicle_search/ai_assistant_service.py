@@ -120,15 +120,15 @@ class AIAssistantService:
             
             # Step 4: Call the AI
             ai_response = self._call_ai_api(prompt)
-            logging.info(f"=== RAW AI RESPONSE ===")
-            logging.info(f"AI Response: {ai_response}")
-            logging.info(f"=== END RAW AI RESPONSE ===")
+            # logging.info(f"=== RAW AI RESPONSE ===")
+            # logging.info(f"AI Response: {ai_response}")
+            # logging.info(f"=== END RAW AI RESPONSE ===")
             
             # Step 5: Parse the response
             result = self._parse_ai_response(ai_response)
-            logging.info(f"=== PARSED AI RESULT ===")
-            logging.info(f"Parsed Result: {result}")
-            logging.info(f"=== END PARSED AI RESULT ===")
+            # logging.info(f"=== PARSED AI RESULT ===")
+            # logging.info(f"Parsed Result: {result}")
+            # logging.info(f"=== END PARSED AI RESULT ===")
             
             # Add deduplication info to result
             if conflict_stats['conflict_groups'] > 0:

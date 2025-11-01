@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Dict, Any
-from utils.data_loader import DataLoader
+from app.utils.data_loader import DataLoader
 
 class DriverFactorLookupService:
     """Service for driver factor lookups used by the frontend."""

@@ -8,7 +8,8 @@ from pydantic import BaseModel
 from app.models.models import ComprehensiveVehicleSearchRequest, RatingInput  # type: ignore
 from app.services.calculations.pricing_orchestrator import PricingOrchestrator
 from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
-
+from app.services.vehicle_search.vehicle_spec_orchestrator import VehicleSpecOrchestrator
+from app.routes.adapter_service import AdapterService 
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,182 +42,27 @@ class GenericResponse(BaseModel):
     """
     output: Dict[str, Any]
 
-
 # Dummy carrier configuration. In a real app, this would come from a config file or database.
 CARRIER_CONFIG = {
     "STATEFARM": {
         "carrier": "STATEFARM",
         "state": "CA",
         # ... other config ...
+    },
+     "aaa": {
+        "carrier": "STATEFARM",
+        "state": "CA",
+        # ... other config ...
+    },
+     "farmers": {
+        "carrier": "STATEFARM",
+        "state": "CA",
+        # ... other config ...
     }
 }
 
-vehicleLookupService = VehicleLookupService()
-
-
-@router.post("/quotes", response_model=GenericResponse, tags=["Insurance Quotes"])
-async def create_quote(payload: dict):
-    """
-    Accepts a generic JSON input and returns a generic JSON output.
-
-    This is a placeholder endpoint. In a real application, this would
-    contain the logic to process insurance policy data and return a quote.
-    """
-    # For demonstration, we'll just echo the input data back.
-    # A real implementation would have business logic here.
-    print([payload])
-    return {"output": payload}
-
-
-@router.post("/calculate-premium/")
-def calculate_premium(rating_input: RatingInput):
-    """
-    Calculates the insurance premium based on the provided rating input from the test page.
-    """
-    logger.info("--- Received Raw Request for /calculate-premium ---")
-    logger.info(rating_input.dict())
-    
-    try:
-        carrier_config = CARRIER_CONFIG.get(rating_input.carrier)
-        if not carrier_config:
-            raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
-
-        orchestrator = NewPricingOrchestrator(carrier_config)
-        result = orchestrator.calculate_premium(rating_input)
-        
-        logger.info("--- Final Calculation Output ---")
-        logger.info(result)
-        return result
-
-    except Exception as e:
-        logger.error(f"An error occurred during premium calculation: {e}", exc_info=True)
-        # Re-raise as an HTTPException to be sent to the client
-        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
-
-
-@router.post("/get_vehicle_ratings")
-def getVehicleRatings(vehicles: List[Vehicle]):
-    """
-    Accepts a list of vehicles and returns their corresponding rating groups.
-    """
-    logger.info(f"--- Vehicle Ratings Request for {len(vehicles)} vehicles ---")
-    
-    try:
-        ratings = []
-        for vehicle in vehicles:
-            logger.info(f"Looking up ratings for: {vehicle.year} {vehicle.make} {vehicle.model}")
-            rating_groups = vehicleLookupService.get_rating_groups(
-                year=vehicle.year,
-                make=vehicle.make,
-                model=vehicle.model,
-                series=vehicle.series or "",
-                package=vehicle.package or "",
-                style=vehicle.style or "",
-                engine=vehicle.engine or ""
-            )
-            ratings.append({"vehicle": vehicle, "ratings": rating_groups}) 
-        
-        logger.info(f"Found ratings for {len(ratings)} vehicles.")
-        return {"data": ratings}
-        
-    except Exception as e:
-        logger.error(f"An error occurred during vehicle lookup: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred during vehicle lookup.")
-
-
-@router.post("/calculate-premium/")
-def calculate_premium(rating_input: RatingInput):
-    """
-    Calculates the insurance premium based on the provided rating input from the test page.
-    """
-    logger.info("--- Received Raw Request for /calculate-premium ---")
-    logger.info(rating_input.dict())
-    
-    try:
-        carrier_config = CARRIER_CONFIG.get(rating_input.carrier)
-        if not carrier_config:
-            raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
-
-        orchestrator = PricingOrchestrator(carrier_config)
-        result = orchestrator.calculate_premium(rating_input)
-        
-        logger.info("--- Final Calculation Output ---")
-        logger.info(result)
-        return result
-
-    except Exception as e:
-        logger.error(f"An error occurred during premium calculation: {e}", exc_info=True)
-        # Re-raise as an HTTPException to be sent to the client
-        raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
-
-
-@router.get("/vehicle-lookup/")
-def vehicle_lookup(
-    type: str = Query(..., description="The type of data to look up (e.g., 'years', 'makes', 'models')"),
-    year: Optional[int] = Query(None),
-    make: Optional[str] = Query(None),
-    model: Optional[str] = Query(None),
-    series: Optional[str] = Query(None),
-    package: Optional[str] = Query(None),
-    style: Optional[str] = Query(None),
-    engine: Optional[str] = Query(None)
-):
-    """
-    Provides vehicle data for cascading dropdowns on the frontend.
-    """
-    logger.info(f"--- Vehicle Lookup Request ---")
-    logger.info(f"Type: {type}, Year: {year}, Make: {make}, Model: {model}")
-    
-    try:
-        from services.lookup_services.vehicle_lookup_service import VehicleLookupService
-        service = VehicleLookupService()
-        data = []
-        if type == "years":
-            data = service.get_years()
-        elif type == "makes" and year is not None:
-            data = service.get_makes(year)
-        elif type == "models" and year is not None and make is not None:
-            data = service.get_models(year, make)
-        elif type == "series" and year is not None and make is not None and model is not None:
-            data = service.get_series(year, make, model)
-        elif type == "packages" and year is not None and make is not None and model is not None and series is not None:
-            data = service.get_packages(year, make, model, series)
-        elif type == "styles" and year is not None and make is not None and model is not None and series is not None and package is not None:
-            data = service.get_styles(year, make, model, series, package)
-        elif type == "engines" and year is not None and make is not None and model is not None and series is not None and package is not None and style is not None:
-            data = service.get_engines(year, make, model, series, package, style)
-        elif type == "ratings" and year is not None and make is not None and model is not None and series is not None and package is not None and style is not None and engine is not None:
-            data = service.get_rating_groups(year, make, model, series, package, style, engine)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid 'type' or missing required parameters.")
-            
-        logger.info(f"Found {len(data)} items for type '{type}'.")
-        return {"data": data}
-        
-    except Exception as e:
-        logger.error(f"An error occurred during vehicle lookup: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred during vehicle lookup.")
-
-
-@router.get("/coverage-limits/")
-def get_coverage_limits():
-    """
-    Returns all available coverage limits and deductible options for the frontend dropdowns.
-    """
-    logger.info("--- Coverage Limits Request ---")
-    
-    try:
-        from services.lookup_services.coverage_factor_lookup_service import CoverageFactorLookupService
-        service = CoverageFactorLookupService(CARRIER_CONFIG["STATEFARM"])
-        service.initialize()
-        data = service.get_all_coverage_limits()
-        
-        logger.info(f"Coverage limits loaded successfully.")
-        return data
-        
-    except Exception as e:
-        logger.error(f"An error occurred while loading coverage limits: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An internal error occurred while loading coverage limits.")
+vehicleLookupService = VehicleLookupService() 
+adapter_service = AdapterService()
 
 
 @router.post("/vehicle-spec-orchestrator/")
@@ -233,7 +79,7 @@ def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
     """
     try:
         # Import the VehicleSpecOrchestrator
-        from services.vehicle_search.vehicle_spec_orchestrator import VehicleSpecOrchestrator
+
         
         # Initialize the orchestrator
         orchestrator = VehicleSpecOrchestrator()
@@ -260,4 +106,35 @@ def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
     except Exception as e:
         logger.error(f"Vehicle spec orchestrator failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
+payload_debug = {'policy_details': {'success': True, 'data': {'policy': {'policyNumber': 'CAAS102222467', 'policyId': 'CAAS102222467_2025-04-30_2026-04-30', 'startDate': '2025-04-30', 'endDate': '2026-04-30', 'totalPremium': '$6,194.28', 'carrier': 'aaa', 'documentType': 'AUTO_INSURANCE_POLICY', 'address': {'streetAddress': '749 DELAWARE AVE', 'addressLocality': 'SAN JOSE', 'addressRegion': 'CA', 'postalCode': '95123-5418'}}, 'company': {'name': 'CSAA Insurance Exchange', 'address': {'streetAddress': 'P.O.Box 22221', 'addressLocality': 'Oakland', 'addressRegion': 'CA', 'postalCode': '94623-2221'}, 'supportCallNumber': '800.922.8228'}, 'drivers': [{'givenName': 'Aykut', 'familyName': 'Yararbas'}, {'givenName': 'Onur', 'familyName': 'Yararbas', 'additionalName': 'Tuna'}, {'givenName': 'Zubeyde', 'familyName': 'Yararbas'}], 'vehicles': [{'brand': 'AUDI', 'model': 'WAGON', 'modelDate': '2011', 'vehicleIdentificationNumber': 'WA1DKAFP2BA076333', 'bodyType': 'WAGON 4 DOOR', 'itemNumber': 1}, {'brand': 'RIVIAN', 'modelDate': '2025', 'vehicleIdentificationNumber': '7PDSGBBA9SN063117', 'bodyType': 'SUV', 'itemNumber': 2}, {'brand': 'TOYOTA', 'model': 'SEDAN', 'modelDate': '2002', 'vehicleIdentificationNumber': '1NXBR12E62Z573165', 'bodyType': 'SEDAN 4 DOOR', 'itemNumber': 3}], 'coverages': [{'coverageName': 'Bodily Injury', 'limitPerPerson': '500,000', 'limitPerOccurrence': '500,000'}, {'coverageName': 'Medical Payments', 'limitPerPerson': '25,000'}, {'coverageName': 'Property Damage', 'limitPerPerson': '100,000', 'limitPerOccurrence': '100,000'}, {'coverageName': 'Uninsured Motorist Property Damage', 'limitPerPerson': '3,500'}, {'coverageName': 'Uninsured Motorists', 'limitPerPerson': '300,000', 'limitPerOccurrence': '500,000'}], 'vehicleCoverages': [{'vehicleItemNumber': 1, 'premiumAmount': '$257', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 1, 'premiumAmount': '$33', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 1, 'premiumAmount': '$367', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 1, 'premiumAmount': '$93', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 1, 'coverageStatus': 'Included'}, {'vehicleItemNumber': 2, 'deductibleLimit': '$50/30', 'premiumAmount': '$52', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'deductibleLimit': '1,000', 'premiumAmount': '$1,153', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'deductibleLimit': '1,000', 'premiumAmount': '$328', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'premiumAmount': '$102', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'premiumAmount': '$148', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'premiumAmount': '$223', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'premiumAmount': '$25', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'premiumAmount': '$395', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 2, 'coverageStatus': 'Included'}, {'vehicleItemNumber': 3, 'premiumAmount': '$1,161', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 3, 'premiumAmount': '$1,168', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 3, 'premiumAmount': '$146', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 3, 'premiumAmount': '$538', 'coverageStatus': 'Active'}, {'vehicleItemNumber': 3, 'coverageStatus': 'Included'}], 'discounts': [{'discountName': 'Good Driver'}, {'discountName': 'Good Student'}, {'discountName': 'Mature Driver'}, {'discountName': 'Multi Car'}, {'discountName': 'Multi Policy Home'}, {'discountName': 'New Driver'}], 'surcharges': [{'surchargeName': 'CA Special Fraud Assessment Fee', 'surchargeAmount': '$5.28'}, {'surchargeName': 'CA Surcharge', 'surchargeAmount': '$0'}], '_metadata': {'source': 'triplestore', 'query_type': 'direct_sparql_to_json', 'policy_number': 'CAAS102222467', 'retrieved_at': '"2025-10-31 06:42:27.335014"'}}}, 'additional_info': {'drivers': [{'firstName': 'Aykut', 'middleName': '', 'lastName': 'YARARBAS', 'dob': '01/02/2001', 'gender': 'Male', 'education': "Master's Degree", 'ageLicensed': '18'}, {'firstName': 'ZUBEYDE', 'middleName': '', 'lastName': 'YARARBAS', 'dob': '01/02/2001', 'gender': 'Female', 'education': "Master's Degree", 'ageLicensed': '18'}, {'firstName': 'Onur', 'middleName': 'Tuna', 'lastName': 'Yararbas', 'dob': '01/02/2001', 'gender': 'Male', 'education': "Master's Degree", 'ageLicensed': '18'}], 'vehicles': [{'vehicle': {'vin': 'WA1DKAFP2BA076333', 'id': 'trim_engine', 'answer': '3.2 PREMIUM PLUS AWD'}}, {'vehicle': {'vin': '1NXBR12E62Z573165', 'id': 'trim_level', 'answer': 'CE'}}], 'general_questions': {'housingType': 'Own Home', 'housingDuration': 'No', 'insuredDuration': '3+ yrs', 'accidentsOrTickets': 'No', 'vehicles': []}}}
 
+@router.post("/quotes", tags=["Insurance Quotes"])
+async def create_quote(payload: Dict[str, Any]):
+    """
+    Accepts a raw insurance policy payload and transforms it into a list of
+    structured RatingInput objects, one for each vehicle in the policy.
+    """
+    try:
+        logging.info(f"Paylod  |{payload}|")
+        rating_inputs = adapter_service.create_rating_inputs_from_payload(payload)
+        logging.info(f" Rating inputs |{rating_inputs}|")
+       
+        rating_input = rating_inputs[0]
+        try:
+            carrier_config = CARRIER_CONFIG.get(rating_input.carrier.lower())
+
+            if not carrier_config:
+                raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
+
+            orchestrator = PricingOrchestrator(carrier_config)
+            result = orchestrator.calculate_premium(rating_input)
+            return [result]
+
+        except Exception as e1:
+            logger.error(f"An error occurred during premium calculation: {e1}", exc_info=True)
+            # Re-raise as an HTTPException to be sent to the client
+            raise HTTPException(status_code=500, detail=f"An internal error occurred: {e1}")
+        
+    except Exception as e:
+        logger.error(f"An error occurred during payload transformation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An internal error occurred during transformation: {e}")

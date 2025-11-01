@@ -1,17 +1,13 @@
-"""
-AI Assistant Service with Built-in Deduplication
-
-This service combines AI-powered vehicle matching with automatic deduplication
-and conflict resolution for vehicle specifications.
-"""
-
 import requests
 import logging
 import json
 import statistics
-from typing import Dict, List, Any, Optional
+import os
+from dotenv import load_dotenv
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,61 +20,43 @@ class AIProvider:
     api_key_env: str
     model: str
 
-class AIAssistantService:
+class AIAssistantServiceGemini:
     """
-    Comprehensive AI Assistant Service with built-in vehicle specification deduplication.
-    
-    This service combines AI-powered vehicle matching with automatic deduplication
-    and conflict resolution for vehicle specifications.
+    Comprehensive AI Assistant Service with built-in vehicle specification deduplication,
+    using only Google Gemini (gemini-flash-lite-latest) for interpretation.
     """
     
-    # AI Provider configurations
+    # AI Provider configuration - Only Gemini
     PROVIDERS = {
-        'openai': AIProvider(
-            name='OpenAI',
-            api_url='https://api.openai.com/v1/chat/completions',
-            api_key_env='OPENAI_API_KEY',
-            model='gpt-4.1-mini'
+        'gemini': AIProvider(
+            name='Gemini',
+            # Using the v1 REST API endpoint
+            api_url='https://generativelanguage.googleapis.com/v1/models/',
+            api_key_env='GEMINI_API_KEY', # Environment variable for Gemini Key
+            model='gemini-2.5-flash' # The requested model
         )
     }
     
-    def __init__(self, provider: str = 'openai'):
+    def __init__(self):
         """
-        Initialize the AI Assistant Service.
-        
-        Args:
-            provider (str): AI provider to use ('openai')
+        Initialize the AI Assistant Service for the Gemini provider.
         """
-        if provider not in self.PROVIDERS:
-            raise ValueError(f"Unsupported provider: {provider}. Supported providers: {list(self.PROVIDERS.keys())}")
-        
-        self.provider = self.PROVIDERS[provider]
+        self.provider = self.PROVIDERS['gemini']
         self.api_key = self._get_api_key()
         
         # Business rules for conflict resolution - use most conservative (highest) rating
         self.conflict_resolution_rules = {
-            'GRG': 'max',         # Garage Rating Group - use highest (most conservative)
-            'DRG': 'max',         # Driver Rating Group - use highest (most conservative)
-            'VSD': 'max',         # Vehicle Safety Data - use highest (most conservative)
-            'LRG': 'max'          # Loss Rating Group - use highest (most conservative)
+            'GRG': 'max', 'DRG': 'max', 'VSD': 'max', 'LRG': 'max'
         }
         
         # Confidence thresholds for conservative approach
         self.confidence_thresholds = {
-            'high': 1,      # Difference <= 1: High confidence (very close values)
-            'medium': 3,    # Difference 2-3: Medium confidence
-            'low': 5,       # Difference 4-5: Low confidence
-            'exclude': 5    # Difference > 5: Exclude from AI model (too much variation)
+            'high': 1, 'medium': 3, 'low': 5, 'exclude': 5
         }
         
     def _get_api_key(self) -> str:
         """Get API key from environment variable or .env file."""
-        import os
-        from dotenv import load_dotenv
-        
-        # Load .env file if it exists
         load_dotenv()
-        
         api_key = os.getenv(self.provider.api_key_env)
         if not api_key:
             raise ValueError(f"API key not found. Please set {self.provider.api_key_env} in your .env file or environment variables.")
@@ -91,24 +69,11 @@ class AIAssistantService:
                                 conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         """
         Use AI assistant to interpret vehicle search results with built-in deduplication.
-        
-        This method automatically deduplicates vehicle specifications and resolves
-        rating conflicts before sending to the AI model.
-        
-        Args:
-            vin_data (Optional[Dict]): VIN lookup data from NHTSA API
-            search_results (List[Dict]): List of matching vehicles from database
-            additional_info (str): Additional unstructured information about the vehicle
-            conversation_history (List[Dict]): Previous Q&A conversation history
-            
-        Returns:
-            Dict: AI interpretation result with either exact match or follow-up questions
         """
         try:
             # Step 1: Deduplicate vehicle specifications
             deduplicated_results, conflict_stats = self._deduplicate_vehicle_specs(search_results)
             
-            # Log deduplication statistics
             if conflict_stats['conflict_groups'] > 0:
                 logging.info(f"Vehicle spec deduplication: {conflict_stats}")
             
@@ -117,20 +82,18 @@ class AIAssistantService:
             
             # Step 3: Create the prompt
             prompt = self._create_prompt(context)
-            
+            connection_test_result = self.test_connection()
+            print("\n=== CONNECTION TEST RESULTS ===")
+            print(json.dumps(connection_test_result, indent=2))
             # Step 4: Call the AI
-            ai_response = self._call_ai_api(prompt)
-            logging.info(f"=== RAW AI RESPONSE ===")
-            logging.info(f"AI Response: {ai_response}")
-            logging.info(f"=== END RAW AI RESPONSE ===")
+            ai_response = self._call_gemini_api(prompt)
+            # logging.info(f"=== RAW GEMINI RESPONSE ===")
+            # logging.info(f"AI Response: {ai_response}")
+            # logging.info(f"=== END RAW GEMINI RESPONSE ===")
             
             # Step 5: Parse the response
             result = self._parse_ai_response(ai_response)
-            logging.info(f"=== PARSED AI RESULT ===")
-            logging.info(f"Parsed Result: {result}")
-            logging.info(f"=== END PARSED AI RESULT ===")
             
-            # Add deduplication info to result
             if conflict_stats['conflict_groups'] > 0:
                 result['deduplication_stats'] = conflict_stats
             
@@ -140,97 +103,69 @@ class AIAssistantService:
             logging.error(f"Error in AI interpretation: {e}", exc_info=True)
             return {
                 'error': f"AI interpretation failed: {str(e)}",
-                'questions': [
-                    "Could you provide more details about the vehicle?",
-                    "What is the body style (2D, 4D, SUV, etc.)?",
-                    "What is the engine type or displacement?"
-                ]
+                'questions': ["Could you provide more details about the vehicle?", "What is the body style (2D, 4D, SUV, etc.)?", "What is the engine type or displacement?"]
             }
     
-    def _deduplicate_vehicle_specs(self, search_results: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
-        """
-        Deduplicate vehicle specifications and resolve rating conflicts.
-        
-        Args:
-            search_results: List of vehicle search results with potential duplicates
-            
-        Returns:
-            Tuple of (deduplicated_results, conflict_statistics)
-        """
+    def _deduplicate_vehicle_specs(self, search_results: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """Deduplicate vehicle specifications and resolve rating conflicts."""
         if not search_results:
             return [], {'total_vehicles': 0, 'unique_specs': 0, 'conflict_groups': 0}
         
-        # Group vehicles by specification
-        spec_groups = self._group_by_specification(search_results)
+        # FIX: The call to this method is now correctly defined below
+        spec_groups = self._group_by_specification(search_results) 
         
-        # Resolve conflicts within each group
         deduplicated_results = []
         conflict_log = []
         
         for spec_key, vehicles in spec_groups.items():
             if len(vehicles) == 1:
-                # No conflicts, use as-is
                 deduplicated_results.append(vehicles[0])
             else:
-                # Resolve conflicts
                 resolved_vehicle, conflicts = self._resolve_rating_conflicts(vehicles)
                 if resolved_vehicle:
                     deduplicated_results.append(resolved_vehicle)
                     if conflicts:
                         conflict_log.extend(conflicts)
                 else:
-                    # Exclude from AI model due to extreme conflicts
                     logging.warning(f"Excluding vehicle spec {spec_key} due to extreme rating conflicts")
         
-        # Calculate conflict statistics
         conflict_stats = {
-            'total_vehicles': len(search_results),
-            'unique_specs': len(spec_groups),
+            'total_vehicles': len(search_results), 'unique_specs': len(spec_groups),
             'conflict_groups': len([g for g in spec_groups.values() if len(g) > 1]),
             'conflict_vehicles': sum(len(g) for g in spec_groups.values() if len(g) > 1),
             'rating_conflicts': self._count_rating_conflicts(conflict_log)
         }
         
-        # Log conflicts for monitoring
         if conflict_log:
             self._log_conflicts(conflict_log)
         
         return deduplicated_results, conflict_stats
     
+    # FIX: ADDED the required method
     def _group_by_specification(self, vehicles: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
         """Group vehicles by their specification (excluding ratings)."""
         spec_groups = defaultdict(list)
-        
         for vehicle in vehicles:
             spec_key = self._create_specification_key(vehicle)
             spec_groups[spec_key].append(vehicle)
-        
         return dict(spec_groups)
     
     def _create_specification_key(self, vehicle: Dict[str, Any]) -> str:
         """Create a unique key for vehicle specification (excluding ratings)."""
         key_components = [
-            str(vehicle.get('year', '')),
-            str(vehicle.get('make', '')),
-            str(vehicle.get('model', '')),
-            str(vehicle.get('series', '')),
-            str(vehicle.get('package', '')),
-            str(vehicle.get('style', '')),
-            str(vehicle.get('engine', '')),
-            str(vehicle.get('wheelbase', ''))
+            str(vehicle.get('year', '')), str(vehicle.get('make', '')), str(vehicle.get('model', '')),
+            str(vehicle.get('series', '')), str(vehicle.get('package', '')), str(vehicle.get('style', '')),
+            str(vehicle.get('engine', '')), str(vehicle.get('wheelbase', ''))
         ]
         return '|'.join(key_components)
     
-    def _resolve_rating_conflicts(self, vehicles: List[Dict[str, Any]]) -> tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
+    def _resolve_rating_conflicts(self, vehicles: List[Dict[str, Any]]) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
         """Resolve rating conflicts for vehicles with identical specifications."""
         if not vehicles:
             return None, []
         
-        # Use first vehicle as base
         resolved_vehicle = vehicles[0].copy()
         conflicts = []
-        
-        # Check each rating field for conflicts
         rating_fields = ['GRG', 'DRG', 'VSD', 'LRG']
         
         for field in rating_fields:
@@ -247,20 +182,14 @@ class AIAssistantService:
         """Resolve conflict for a specific rating field."""
         rule = self.conflict_resolution_rules.get(field, 'median')
         
-        # Calculate difference magnitude
         if field == 'VSD':
             max_diff = len(set(values)) - 1
         else:
             numeric_values = [float(v) for v in values if v is not None]
-            if numeric_values:
-                max_diff = max(numeric_values) - min(numeric_values)
-            else:
-                max_diff = 0
+            max_diff = max(numeric_values) - min(numeric_values) if numeric_values else 0
         
-        # Determine confidence level
         confidence = self._determine_confidence_level(max_diff)
         
-        # Apply resolution rule
         if rule == 'max':
             resolved_value = self._calculate_max(values)
         elif rule == 'median':
@@ -271,38 +200,24 @@ class AIAssistantService:
             resolved_value = values[0]
         
         return {
-            'field': field,
-            'values': values,
-            'resolved_value': resolved_value,
-            'max_difference': max_diff,
-            'confidence': confidence,
-            'rule': rule,
-            'vehicle_count': len(vehicles)
+            'field': field, 'values': values, 'resolved_value': resolved_value,
+            'max_difference': max_diff, 'confidence': confidence, 
+            'rule': rule, 'vehicle_count': len(vehicles)
         }
     
     def _calculate_max(self, values: List[Any]) -> Any:
         """Calculate maximum (most conservative) value for a list of values."""
         try:
-            # For numeric values, use the maximum
             numeric_values = [float(v) for v in values if v is not None]
-            if numeric_values:
-                return max(numeric_values)
-            else:
-                # For non-numeric values (like VSD), use the highest alphabetical value
-                # This ensures consistent ordering for categorical data
-                return max(values) if values else None
+            return max(numeric_values) if numeric_values else (max(values) if values else None)
         except (ValueError, TypeError):
-            # If conversion fails, use the highest value as-is
             return max(values) if values else None
     
     def _calculate_median(self, values: List[Any]) -> Any:
         """Calculate median value for a list of values."""
         try:
             numeric_values = [float(v) for v in values if v is not None]
-            if numeric_values:
-                return statistics.median(numeric_values)
-            else:
-                return values[0] if values else None
+            return statistics.median(numeric_values) if numeric_values else (values[0] if values else None)
         except (ValueError, TypeError):
             return values[0] if values else None
     
@@ -310,11 +225,9 @@ class AIAssistantService:
         """Calculate mode (most common value) for a list of values."""
         if not values:
             return None
-        
         value_counts = defaultdict(int)
         for value in values:
             value_counts[value] += 1
-        
         return max(value_counts, key=value_counts.get)
     
     def _determine_confidence_level(self, max_difference: float) -> str:
@@ -355,16 +268,7 @@ class AIAssistantService:
         
         if vin_data:
             context['vin_data'] = {
-                'make': vin_data.get('make'),
-                'model': vin_data.get('model'),
-                'year': vin_data.get('year'),
-                'body_class': vin_data.get('body_class'),
-                'engine_config': vin_data.get('engine_config'),
-                'fuel_type': vin_data.get('fuel_type'),
-                'drive_type': vin_data.get('drive_type'),
-                'transmission': vin_data.get('transmission'),
-                'trim': vin_data.get('trim'),
-                'series': vin_data.get('series')
+                k: vin_data.get(k) for k in ['make', 'model', 'year', 'body_class', 'engine_config', 'fuel_type', 'drive_type', 'transmission', 'trim', 'series']
             }
         
         return context
@@ -400,45 +304,28 @@ IMPORTANT: When returning a match, use this EXACT format:
         
         # Add search criteria explicitly
         if context.get('vin_data'):
-            # Extract search criteria from VIN data
-            year = context['vin_data'].get('year', '')
-            make = context['vin_data'].get('make', '')
-            model = context['vin_data'].get('model', '')
+            vin_data = context['vin_data']
             prompt += f"\n**SEARCH CRITERIA:**\n"
-            prompt += f"Year: {year}\n"
-            prompt += f"Make: {make}\n"
-            prompt += f"Model: {model}\n"
-            if context['vin_data'].get('body_class'):
-                prompt += f"Body Class: {context['vin_data'].get('body_class')}\n"
-            if context['vin_data'].get('drive_type'):
-                prompt += f"Drive Type: {context['vin_data'].get('drive_type')}\n"
-            if context['vin_data'].get('engine_config'):
-                prompt += f"Engine: {context['vin_data'].get('engine_config')}\n"
-        else:
-            # If no VIN data, we need to extract from search results
-            if context['search_results']:
-                first_vehicle = context['search_results'][0]
-                year = first_vehicle.get('year', '')
-                make = first_vehicle.get('make', '')
-                model = first_vehicle.get('model', '')
-                prompt += f"\n**SEARCH CRITERIA:**\n"
-                prompt += f"Year: {year}\n"
-                prompt += f"Make: {make}\n"
-                prompt += f"Model: {model}\n"
+            prompt += f"Year: {vin_data.get('year', '')}\n"
+            prompt += f"Make: {vin_data.get('make', '')}\n"
+            prompt += f"Model: {vin_data.get('model', '')}\n"
+            if vin_data.get('body_class'): prompt += f"Body Class: {vin_data.get('body_class')}\n"
+            if vin_data.get('drive_type'): prompt += f"Drive Type: {vin_data.get('drive_type')}\n"
+            if vin_data.get('engine_config'): prompt += f"Engine: {vin_data.get('engine_config')}\n"
+        elif context['search_results']:
+            first_vehicle = context['search_results'][0]
+            prompt += f"\n**SEARCH CRITERIA:**\n"
+            prompt += f"Year: {first_vehicle.get('year', '')}\n"
+            prompt += f"Make: {first_vehicle.get('make', '')}\n"
+            prompt += f"Model: {first_vehicle.get('model', '')}\n"
         
         # Add additional info
-        if context['additional_info']:
-            prompt += f"\n**ADDITIONAL INFORMATION:**\n{context['additional_info']}\n"
-            logging.info(f"Additional info sent to AI: {context['additional_info']}")
-        else:
-            prompt += f"\n**ADDITIONAL INFORMATION:**\n(No additional information provided)\n"
-            logging.info("No additional info provided to AI")
+        prompt += f"\n**ADDITIONAL INFORMATION:**\n{context['additional_info'] or '(No additional information provided)'}\n"
         
         # Add search results as table format
         prompt += f"\nPossible Matches ({context['total_matches']} vehicles):\n"
         prompt += "Year Make Model Series Package Style Engine\n"
         for vehicle in context['search_results']:
-            # Create table row format
             year = vehicle.get('year', '')
             make = vehicle.get('make', '')
             model = vehicle.get('model', '')
@@ -446,21 +333,15 @@ IMPORTANT: When returning a match, use this EXACT format:
             package = vehicle.get('package', '') or '-'
             style = vehicle.get('style', '') or '-'
             engine = vehicle.get('engine', '') or '-'
-            
             prompt += f"{year} {make} {model} {series} {package} {style} {engine}\n"
-            
-            # Log vehicles with packages for debugging
-            if vehicle.get('package'):
-                logging.info(f"Vehicle has package: {vehicle.get('package')}")
         
-        # Add conversation history if available
+        # Add conversation history
         if context.get('conversation_history'):
             prompt += f"\nPrevious Conversation:\n"
             for i, exchange in enumerate(context['conversation_history'], 1):
                 prompt += f"Q{i}: {exchange.get('question', '')}\n"
                 prompt += f"A{i}: {exchange.get('answer', '')}\n\n"
             
-            # Add explicit instruction to return a match after questions are answered
             prompt += f"\nIMPORTANT: Based on the conversation above, you now have enough information to make a match. "
             prompt += f"Use the answers provided to find the exact vehicle from the list above. "
             prompt += f"Return the vehicle as a match string in the format: 'YEAR MAKE MODEL [SERIES] [PACKAGE] (STYLE)'\n"
@@ -468,76 +349,86 @@ IMPORTANT: When returning a match, use this EXACT format:
         
         return prompt
     
-    def _call_ai_api(self, prompt: str) -> str:
-        """Call the AI API based on the configured provider."""
-        if self.provider.name == 'OpenAI':
-            return self._call_openai_api(prompt)
-        else:
-            raise ValueError(f"Unsupported provider: {self.provider.name}")
-    
-    def _call_openai_api(self, prompt: str) -> str:
-        """Call OpenAI API."""
+    def _call_gemini_api(self, prompt: str) -> str:
+        """Call Google Gemini API using the specified model."""
+        
+        # The full URL includes the model and the 'generateContent' method, with API key
+        full_api_url = f"{self.provider.api_url}{self.provider.model}:generateContent?key={self.api_key}"
+        
+        # System instruction role is embedded into the content for the REST API call
+        system_instruction = "You are an expert insurance analyst specializing in vehicle identification and rating classification."
+        full_prompt = f"{system_instruction}\n\n{prompt}"
+        
+        data = {
+            'contents': [
+                {
+                    'role': 'user',
+                    'parts': [
+                        {'text': full_prompt}
+                    ]
+                }
+            ],
+            'config': {
+                'temperature': 0.01,
+                'topP': 1,
+            }
+        }
+        
         headers = {
-            'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json'
         }
         
-        data = {
-            'model': self.provider.model,
-            'messages': [
-                {
-                    'role': 'system',
-                    'content': 'You are an expert insurance analyst specializing in vehicle identification and rating classification.'
-                },
-                {
-                    'role': 'user',
-                    'content': prompt
-                }
-            ],
-            'temperature': 0.01,
-            'top_p': 1,
-            'max_tokens': 2000
-        }
+        logging.info(f"Calling Gemini API with model: {self.provider.model}. Payload size: {len(full_prompt)} chars.")
+        logging.debug(f"Payload: {json.dumps(data, indent=2)}")
         
-        response = requests.post(self.provider.api_url, headers=headers, json=data, timeout=30)
+        response = requests.post(full_api_url, headers=headers, json=data, timeout=30)
+        
+        # Use raise_for_status() to automatically throw the HTTPError on 4xx/5xx responses
         response.raise_for_status()
         
         result = response.json()
-        return result['choices'][0]['message']['content']
-    
+        
+        # Extract the text from the response
+        if ('candidates' in result and result['candidates'] and 
+            'content' in result['candidates'][0] and 
+            'parts' in result['candidates'][0]['content']):
+            
+            return result['candidates'][0]['content']['parts'][0]['text']
+        
+        logging.error(f"Unexpected Gemini API response structure: {json.dumps(result, indent=2)}")
+        raise RuntimeError("Failed to get a text response from the Gemini API.")
+
     def _parse_ai_response(self, ai_response: str) -> Dict[str, Any]:
         """Parse the AI response and extract structured data."""
         try:
-            # Try to extract JSON from the response
-            import re
+            # Try to extract JSON from the response using regex
             json_match = re.search(r'\{.*\}', ai_response, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
                 return json.loads(json_str)
             else:
-                # Fallback if no JSON found
-                return {
-                    'questions': ['Could you provide more details about the vehicle?']
-                }
+                logging.warning("No JSON object found in AI response. Returning default questions.")
+                return {'questions': ['Could you provide more details about the vehicle?']}
         except json.JSONDecodeError as e:
             logging.error(f"Failed to parse AI response as JSON: {e}")
-            return {
-                'questions': ['Could you provide more details about the vehicle?']
-            }
+            return {'questions': ['Could you provide more details about the vehicle?']}
     
     def get_supported_providers(self) -> List[str]:
-        """Get list of supported AI providers."""
+        """Get list of supported AI providers (only Gemini)."""
         return list(self.PROVIDERS.keys())
     
     def test_connection(self) -> Dict[str, Any]:
         """Test the AI API connection."""
         try:
-            test_prompt = "Hello, this is a test. Please respond with 'Connection successful'."
-            response = self._call_ai_api(test_prompt)
+            test_prompt = "Hello, this is a test. Please respond with a simple JSON object: {\"status\": \"successful\"}"
+            response = self._call_gemini_api(test_prompt)
+            parsed_response = self._parse_ai_response(response)
             return {
                 'status': 'success',
                 'provider': self.provider.name,
-                'response': response[:100] + '...' if len(response) > 100 else response
+                'model': self.provider.model,
+                'response_snippet': response[:100] + '...' if len(response) > 100 else response,
+                'parsed_status': parsed_response.get('status')
             }
         except Exception as e:
             return {

@@ -51,7 +51,7 @@ This folder contains services related to insurance calculations and pricing orch
 ## Usage
 
 ```python
-from services.calculations import (
+from app.services.calculations import (
     DiscountService,
     DriverFactorLookupService,
     SafetyRecordService,
@@ -79,6 +79,6 @@ The calculations services follow a microservices architecture where:
 
 ## Dependencies
 
-- `models.models` - Data models and input structures
-- `services.aggregation_services` - Data aggregation services
-- `services.lookup_services` - Data lookup services
+- `app.models.models` - Data models and input structures
+- `app.services.aggregation_services` - Data aggregation services
+- `app.services.lookup_services` - Data lookup services

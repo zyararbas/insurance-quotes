@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict, List
-from utils.data_loader import DataLoader
-from models.models import Discounts
+from app.utils.data_loader import DataLoader
+from app.models.models import Discounts
 import logging
 
 logger = logging.getLogger(__name__)

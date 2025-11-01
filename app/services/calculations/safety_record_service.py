@@ -3,8 +3,8 @@ from datetime import date, timedelta
 from typing import List, Dict, Tuple
 from math import floor
 
-from utils.data_loader import DataLoader
-from models.models import Driver, Violation
+from app.utils.data_loader import DataLoader
+from app.models.models import Driver, Violation
 
 
 class SafetyRecordService:
