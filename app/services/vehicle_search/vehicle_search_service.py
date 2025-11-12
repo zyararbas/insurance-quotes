@@ -118,7 +118,7 @@ class VehicleSearchService:
             response = self.vin_session.get(
                 f"{self.vin_base_url}/decodevin/{vin}",
                 params={'format': 'json'},
-                timeout=10
+                timeout=60
             )
             response.raise_for_status()
             
