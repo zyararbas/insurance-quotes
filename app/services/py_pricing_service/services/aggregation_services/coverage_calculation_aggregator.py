@@ -227,6 +227,21 @@ class CoverageCalculationAggregator:
             }
         }
         
+        # Step 7: Estimate prices for other carriers if this is State Farm
+        carrier_estimates = {}
+        carrier = self.carrier_config.get("carrier", rating_input.carrier).upper()
+        if carrier == "STATEFARM":
+            logger.info("--- Step 7: Estimating Other Carrier Prices ---")
+            from services.calculations.carrier_price_estimation_service import CarrierPriceEstimationService
+            estimation_service = CarrierPriceEstimationService(self.carrier_config)
+            estimation_service.initialize()
+            carrier_estimates = estimation_service.estimate_carrier_prices(total_premium)
+            logger.info(f"Carrier price estimates: {carrier_estimates}")
+        
+        # Add carrier estimates to result
+        if carrier_estimates:
+            result["carrier_estimates"] = carrier_estimates
+        
         logger.info(f"Final calculation complete. Total premium: {total_premium}")
         return result
         
