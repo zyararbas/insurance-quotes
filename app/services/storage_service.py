@@ -4,6 +4,7 @@ from enum import Enum
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, PyMongoError
 import logging
+import pandas as pd
 
 load_dotenv(find_dotenv())
 
@@ -30,8 +31,8 @@ class StorageService:
             self.MONGO_HOST = os.environ.get("MONGO_HOST", "localhost")
             self.MONGO_PORT = int(os.environ.get("MONGO_PORT", 27017))
             self.MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", "coveragecompassai")
-            self.MONGO_USER = os.environ.get("MONGO_USER", "lala")
-            self.MONGO_PASSWORD = os.environ.get("MONGO_PASSWORD", "lalaland!")
+            self.MONGO_USER = os.environ.get("MONGO_USER", "")
+            self.MONGO_PASSWORD = os.environ.get("MONGO_PASSWORD", "")
             self._client = None
             self._db = None
             # self._collection = None
@@ -124,3 +125,29 @@ class StorageService:
         except PyMongoError as e:
             logging.error(f"Error deleting document from collection {collection_name}: {e}")
             return 0 
+
+    def get_collection_as_dataframe(self, collection_name: str) -> pd.DataFrame:
+        """
+        Fetches all documents from a specified collection and returns them as a pandas DataFrame.
+        
+        Args:
+            collection_name: The name of the collection to fetch.  
+        
+        Returns:
+            A pandas DataFrame containing the collection data.
+        """
+        if self._db is None:
+            raise ConnectionError("MongoDB database not initialized. Call connect() first.")
+        try:
+            logging.info(f"Fetching all documents from collection: '{collection_name}'")
+            # Pass an empty query to find all documents
+            documents = self.find({}, collection_name)
+            if not documents:
+                logging.warning(f"No documents found in collection '{collection_name}'.")
+                return pd.DataFrame()
+            
+            df = pd.DataFrame(documents)
+            return df
+        except PyMongoError as e:
+            logging.error(f"Error fetching collection {collection_name} as DataFrame: {e}")
+            return pd.DataFrame() # Return empty dataframe on error

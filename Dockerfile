@@ -28,4 +28,5 @@ ENV UVICORN_HOST=0.0.0.0
 # # You'll need to replace 'app.main:app' with the correct path to your FastAPI instance.
 # # For example, if your app is in 'app/main.py' and your FastAPI instance is called 'app',
 # # it would be `uvicorn app.main:app`
-CMD ["/usr/local/bin/python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+# # CMD ["/usr/local/bin/python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8002", "-t", "180"]
