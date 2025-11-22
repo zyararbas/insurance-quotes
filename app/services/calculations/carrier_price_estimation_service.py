@@ -14,7 +14,8 @@ class CarrierPriceEstimationService:
         "GEICO": 0.64,
         "PROGRESSIVE": 0.75,
         "ALLSTATE": 0.92,
-        "LIBERTY_MUTUAL": 1.4
+        "LIBERTY_MUTUAL": 1.4,
+        "FARMERS": 1.02
     }
     
     def __init__(self, carrier_config: dict):
