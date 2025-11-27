@@ -86,10 +86,10 @@ class VehicleSpecOrchestrator:
             vin_data = search_result.get('vin_data')
             
             if not search_results:
-                return {
-                    'error': 'No vehicles found matching the specified criteria.',
-                    'status': 'no_results'
-                }
+                result = self._process_results(
+                    vin_data, {"make": vin_data.get('make'),"model": vin_data.get('model'), "year": vin_data.get('year')}, search_results, {}, {}
+                )
+                return result 
             
             # Step 2: AI interpretation with deduplication
             ai_result = self._perform_ai_interpretation(
@@ -98,7 +98,7 @@ class VehicleSpecOrchestrator:
             
             # Step 3: Process and format results
             result = self._process_results(
-                vin_data, search_result.get('search_criteria', {}), search_results, ai_result, conversation_history
+                vin_data, search_result.get('search_criteria', {make: vin_data.get('make'), model: vin_data.get('model'), year: vin_data.get('year')}), search_results, ai_result, conversation_history
             )
             
             return result

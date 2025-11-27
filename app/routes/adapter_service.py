@@ -48,16 +48,13 @@ class AdapterService:
 
         drivers = []
         for i, driver_data in enumerate(drivers_info):
-            age = self._calculate_age(driver_data.get("dob"))
-            years_licensed = self._calculate_years_licensed(age, driver_data.get("ageLicensed"))
-
+            years_licensed = driver_data.get("yearsLicensed")
+            marital_status_string = driver_data.get("maritalStatus")
+            marital_status = 'M' if marital_status_string == "married" else 'S'
             driver = Driver(
                 driver_id=f"driver_{i+1}",
-                years_licensed=years_licensed,
-                age=age,
-                # Assuming 'S' for Single, 'M' for Married. No data in payload, so defaulting to None.
-                marital_status=None,
-                # No violation data in payload, so it defaults to an empty list.
+                years_licensed=int(years_licensed), 
+                marital_status=marital_status,
                 violations=[],
             )
             drivers.append(driver)
@@ -86,32 +83,26 @@ class AdapterService:
 
     def _extract_usage(self, payload: Dict[str, Any]) -> Usage:
         """Extracts and transforms usage information from the payload."""
-        vehicles = payload.get("policy_details", {}).get("data", {}).get("vehicles", [])
+        vehicles = payload.get("additional_info", {}).get("vehicles", [])
         # The source payload does not contain usage details like annual mileage or type.
         # We will use sensible defaults as placeholders until the source provides them.
+        usage_info = vehicles[0].get("usage", {})
+        annual_mileage = vehicles[0].get("annualMileage")
         return Usage(
-            annual_mileage=12000,  # Using a common default value
-            type="Pleasure / Work / School",  # Matching the Literal defined in the Usage model
+            annual_mileage=int(annual_mileage),  # Using a common default value
+            type= 'Pleasure / Work / School' if usage_info == "Personal Use " else 'Business' if usage_info == "Business" else 'Farm',
             single_automobile=len(vehicles) == 1,
         )
 
-    def _extract_vehicle(self, vehicle_data: Dict[str, Any], additional_vehicles_info: List[Dict[str, Any]]) -> Vehicle:
+    def _extract_vehicle(self, vehicle_data: Dict[str, Any]) -> Vehicle:
         """Extracts and transforms a single vehicle's information."""
-        vin = vehicle_data.get("vehicleIdentificationNumber")
-        
-        # Find additional info for this vehicle by VIN
-        additional_info = {}
-        for info in additional_vehicles_info:
-            if info.get("vehicle", {}).get("vin") == vin:
-                # Assuming 'answer' contains the package/trim info
-                additional_info['package'] = info.get("vehicle", {}).get("answer", "")
-                break
-
+        vin = vehicle_data.get("vin")
+    
         return Vehicle(
-            year=vehicle_data.get("modelDate"),
-            make=vehicle_data.get("brand"),
-            model=vehicle_data.get("bodyType"), # Using bodyType as model, as no other field fits
-            package=additional_info.get('package', ''),
+            year=vehicle_data.get("year"),
+            make=vehicle_data.get("make"),
+            model=vehicle_data.get("model"), # Using bodyType as model, as no other field fits
+            engine=vehicle_data.get('trim_engine', ''),
             # series, style, engine, msrp not in payload
         )
 
@@ -136,37 +127,47 @@ class AdapterService:
         of RatingInput objects, one for each vehicle.
         """
         policy_data = payload.get("policy_details", {}).get("data", {})
-        if not policy_data:
-            return []
-
-        policy_info = policy_data.get("policy", {})
-        vehicles_data = policy_data.get("vehicles", [])
+        state_info = "CA"
+        carrier_info = "generic"
+        zip_code_full = ""
+        coverage_info = {}
+        discounts_info = {}
+        if policy_data:
+            policy_info = policy_data.get("policy", {})
+            carrier_info=policy_info.get("carrier", "generic")
+            state_info=policy_info.get("address", {}).get("addressRegion")
+            discounts_info = self._extract_discounts(payload)
+            zip_code_full = policy_info.get("address", {}).get("postalCode", "")
+            vehicles_data = policy_data.get("vehicles", [])
+            coverage_info = self._extract_coverages(payload)
+        else: 
+            zip_code_full = payload.get("additional_info", {}).get("general_questions", {}).get("zip_code", "")
+        
         additional_vehicles_info = payload.get("additional_info", {}).get("vehicles", [])
 
         # Extract shared information
-        zip_code_full = policy_info.get("address", {}).get("postalCode", "")
+        
         zip_code = zip_code_full.split("-")[0] if zip_code_full else ""
-
         drivers = self._extract_drivers(payload)
-        discounts = self._extract_discounts(payload)
+      
         usage = self._extract_usage(payload)
-        coverages = self._extract_coverages(payload)
+      
 
         # These factors are not in the payload, so we use default values.
         special_factors = SpecialFactors()
 
         rating_inputs = []
-        for vehicle_data in vehicles_data:
-            vehicle = self._extract_vehicle(vehicle_data, additional_vehicles_info)
+        for vehicle_data in additional_vehicles_info:
+            vehicle = self._extract_vehicle(vehicle_data)
 
             rating_input = RatingInput(
-                carrier=policy_info.get("carrier"),
-                state=policy_info.get("address", {}).get("addressRegion"),
+                carrier=carrier_info,
+                state=state_info,
                 zip_code=zip_code,
                 vehicle=vehicle,
-                coverages=coverages,
+                coverages=coverage_info,
                 drivers=drivers,
-                discounts=discounts,
+                discounts=discounts_info,
                 special_factors=special_factors,
                 usage=usage,
             )

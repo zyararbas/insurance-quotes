@@ -58,6 +58,11 @@ CARRIER_CONFIG = {
         "carrier": "STATEFARM",
         "state": "CA",
         # ... other config ...
+    },
+    "generic": {
+        "carrier": "STATEFARM",
+        "state": "CA",
+        # ... other config ...
     }
 }
 
