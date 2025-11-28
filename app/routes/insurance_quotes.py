@@ -124,22 +124,36 @@ async def create_quote(payload: Dict[str, Any]):
         rating_inputs = adapter_service.create_rating_inputs_from_payload(payload)
         logging.info(f" Rating inputs |{rating_inputs}|")
        
-        rating_input = rating_inputs[0]
-        try:
-            carrier_config = CARRIER_CONFIG.get(rating_input.carrier.lower())
-
-            if not carrier_config:
-                raise HTTPException(status_code=400, detail=f"Carrier '{rating_input.carrier}' not supported.")
-
-            orchestrator = PricingOrchestrator(carrier_config)
-            result = orchestrator.calculate_premium(rating_input)
-            return [result]
-
-        except Exception as e1:
-            logger.error(f"An error occurred during premium calculation: {e1}", exc_info=True)
-            # Re-raise as an HTTPException to be sent to the client
-            raise HTTPException(status_code=500, detail=f"An internal error occurred: {e1}")
+        results = []
+        for rating_input in rating_inputs:
+            result = _calculate_single_rating(rating_input)
+            if result:
+                results.append(result)
         
+        return results
+
     except Exception as e:
         logger.error(f"An error occurred during payload transformation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An internal error occurred during transformation: {e}")
+
+
+def _calculate_single_rating(rating_input: RatingInput) -> Optional[Dict[str, Any]]:
+    """
+    Helper function to calculate premium for a single rating input.
+    Returns the result dict or None if an error occurs (logged).
+    """
+    try:
+        carrier_config = CARRIER_CONFIG.get(rating_input.carrier.lower())
+
+        if not carrier_config:
+            logger.warning(f"Carrier '{rating_input.carrier}' not supported.")
+            return None
+
+        orchestrator = PricingOrchestrator(carrier_config)
+        result = orchestrator.calculate_premium(rating_input)
+        return result
+
+    except Exception as e:
+        logger.error(f"Error calculating premium for carrier {rating_input.carrier}: {e}", exc_info=True)
+        return None
+        

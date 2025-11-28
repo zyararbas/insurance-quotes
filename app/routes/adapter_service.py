@@ -13,6 +13,7 @@ from app.models.models import (
     Violation,
 )
 
+from app.routes.min_recommended_max_coverages import COVERAGES
 
 class AdapterService:
     """
@@ -129,8 +130,7 @@ class AdapterService:
         policy_data = payload.get("policy_details", {}).get("data", {})
         state_info = "CA"
         carrier_info = "generic"
-        zip_code_full = ""
-        coverage_info = {}
+        zip_code_full = "" 
         discounts_info = {}
         if policy_data:
             policy_info = policy_data.get("policy", {})
@@ -138,10 +138,12 @@ class AdapterService:
             state_info=policy_info.get("address", {}).get("addressRegion")
             discounts_info = self._extract_discounts(payload)
             zip_code_full = policy_info.get("address", {}).get("postalCode", "")
-            vehicles_data = policy_data.get("vehicles", [])
+            additional_vehicles_info = policy_data.get("vehicles", [])
             coverage_info = self._extract_coverages(payload)
         else: 
             zip_code_full = payload.get("additional_info", {}).get("general_questions", {}).get("zip_code", "")
+            coverages_choise = payload.get("additional_info", {}).get("general_questions", {}).get("coverageLevel", "min")
+            coverage_info = COVERAGES.get(coverages_choise.lower(), {})
         
         additional_vehicles_info = payload.get("additional_info", {}).get("vehicles", [])
 
