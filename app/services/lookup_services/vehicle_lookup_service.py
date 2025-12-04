@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 from typing import List
 from app.utils.data_loader import DataLoader
-
+from app.services.lookup_services.vehicle_lookup_service import fetchVehicleDataUsingRAG
 logger = logging.getLogger(__name__)
 
 class VehicleLookupService:
@@ -155,7 +155,9 @@ class VehicleLookupService:
             (self.vehicle_data['BODYSTYLE'].fillna('') == style) &
             (self.vehicle_data['ENGINE'].fillna('') == engine)
         ]
-        
+        # TODO. 
+        if not vehicle_data:
+             vehicle_data = fetchVehicleDataUsingRAG(year, make, model, series, package, style, engine)
         if len(vehicle_data) > 0:
             row = vehicle_data.iloc[0]
             return {

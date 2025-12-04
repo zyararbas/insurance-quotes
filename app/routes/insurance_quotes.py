@@ -59,6 +59,11 @@ CARRIER_CONFIG = {
         "state": "CA",
         # ... other config ...
     },
+     "geico": {
+        "carrier": "STATEFARM",
+        "state": "CA",
+        # ... other config ...
+    },
     "generic": {
         "carrier": "STATEFARM",
         "state": "CA",
@@ -143,7 +148,11 @@ def _calculate_single_rating(rating_input: RatingInput) -> Optional[Dict[str, An
     Returns the result dict or None if an error occurs (logged).
     """
     try:
-        carrier_config = CARRIER_CONFIG.get(rating_input.carrier.lower())
+        carrier_config = {
+            "carrier": "STATEFARM",
+            "state": "CA",
+            # ... other config ...
+         }
 
         if not carrier_config:
             logger.warning(f"Carrier '{rating_input.carrier}' not supported.")

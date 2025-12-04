@@ -341,7 +341,7 @@ if __name__ == "__main__":
      # --- CSV Configuration ---
     RATINGS_FILE = "/Users/zubeydeyararbas/ml/insurance-quotes/Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv"
  
-    use_loader = 'mongo'
+    use_loader = 'csv'
     try:
         if use_loader == 'mongo':
             mongo_loader = MongoDataLoader(
