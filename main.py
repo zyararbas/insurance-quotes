@@ -1,12 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.routes import health, insurance_quotes
+from app.services.vector_databases.vehicle_rates_search import initialize_vehicle_rates_db
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize the singleton
+    initialize_vehicle_rates_db()
+    yield
+    # Shutdown: Clean up if necessary (nothing to do for now)
 
 app = FastAPI(
     title="Insurance Quotes API",
     description="Provides insurance quotes for a given insurance policy information for a given insurance carriers",
     version="0.1.0",
+    lifespan=lifespan
 )
 # Configure CORS
 origins = [

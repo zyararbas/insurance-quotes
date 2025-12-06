@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 from typing import List
 from app.utils.data_loader import DataLoader
-from app.services.lookup_services.vehicle_lookup_service import fetchVehicleDataUsingRAG
+
 logger = logging.getLogger(__name__)
 
 class VehicleLookupService:

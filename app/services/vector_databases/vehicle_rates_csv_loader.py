@@ -31,7 +31,8 @@ class CsvDataLoader():
                 f"Ratings - GRG: {row.get('grg')}, DRG: {row.get('drg')}."
             )
             documents.append(semantic_text)
-            
+            if row.get('make') == 'RIVIAN':
+                print(row)
             # Store metadata with lowercase keys
             metadatas.append({
                 "year": int(row.get('year', 0)),
@@ -41,7 +42,11 @@ class CsvDataLoader():
                 "package": clean(row.get('package')),
                 "style": clean(row.get('style')),
                 "engine": clean(row.get('engine')),
-                "grg": int(row.get('grg', 0))
+                "grg": row.get('grg', 0),
+                "drg": row.get('drg', 0),
+                "vsd": row.get('vsd', 0),
+                "lrg": row.get('lrg', 0),
+                "expiration": int(row.get('expiration', 0))
             })
             ids.append(f"csv_{idx}") # Create a unique ID for CSV rows
             
@@ -61,3 +66,10 @@ class CsvDataLoader():
             print(f"  - Indexed {end_idx}/{total_docs}")
             
         print("CSV Indexing Complete.")
+
+# --- EXECUTION ---
+if __name__ == "__main__":
+    RATINGS_FILE = "../../Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv"
+    loader = CsvDataLoader(RATINGS_FILE)
+    loader.index_data()
+    

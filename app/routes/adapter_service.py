@@ -104,6 +104,9 @@ class AdapterService:
             make=vehicle_data.get("make"),
             model=vehicle_data.get("model"), # Using bodyType as model, as no other field fits
             engine=vehicle_data.get('trim_engine', ''),
+            package=vehicle_data.get('package', ''),
+            style=vehicle_data.get('style', ''),
+            series=vehicle_data.get('series', '')
             # series, style, engine, msrp not in payload
         )
 

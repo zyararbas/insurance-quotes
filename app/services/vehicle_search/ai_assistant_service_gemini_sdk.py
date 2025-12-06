@@ -284,7 +284,7 @@ IMPORTANT: When returning a match, use this EXACT format:
 - Always use parentheses around STYLE: (2D CPE), (2D CV), etc.
 - Do NOT include engine or wheelbase information
 - Example: "2022 BENTLEY CONTINENTAL GT V8 (2D CPE)"
-
+- When preparing question, the id must match the field name. Double check, let's think step by step.
 """
         if context.get('vin_data'):
             vin_data = context['vin_data']; prompt += f"\n**SEARCH CRITERIA:**\n"

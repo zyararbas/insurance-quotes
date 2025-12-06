@@ -6,9 +6,8 @@ import time
 import ast
 import re
 from chromadb.utils import embedding_functions
-from abc import ABC, abstractmethod
-from vehicle_rates_mongo_loader import MongoDataLoader
-from vehicle_rates_csv_loader import CsvDataLoader
+from typing import Optional
+from abc import ABC, abstractmethod 
 
 # Define "junk" words that don't help identify a model
 MODEL_STOP_WORDS = {
@@ -38,20 +37,13 @@ class IDataLoader(ABC):
 # -------------------------------------------------
 # 2. THE MAIN VEHICLE VECTOR DB CLASS
 # -------------------------------------------------
-class VehicleVectorDB:
-    def __init__(self, data_loader: IDataLoader, db_folder="./vehicle_db", force_reindex=False):
+class VehicleRatesVectorDB:
+    def __init__(self, db_folder="./vehicle_db" ):
         """
         Initializes the Local Vector Database.
         It now accepts a 'data_loader' to handle indexing.
         """
-        print(f"--- Initializing ChromaDB (v{chromadb.__version__}) ---")
-        
-        # 1. Clean up old DB if requested
-        if force_reindex and os.path.exists(db_folder):
-            print(f"[RESET] Deleting old database at {db_folder} to force re-indexing...")
-            shutil.rmtree(db_folder)
-            time.sleep(1) # Pause to let OS release file locks
-            
+        print(f"--- Initializing ChromaDB (v{chromadb.__version__}) ---")  
         # 2. Connect to local persistent storage
         self.client = chromadb.PersistentClient(path=db_folder)
         
@@ -65,16 +57,7 @@ class VehicleVectorDB:
             name="vehicle_ratings_v1",
             embedding_function=self.emb_fn
         )
-        
-        # 5. Check if we need to index data
-        if self.collection.count() == 0 or force_reindex:
-            print(f"Database at '{db_folder}' is empty or re-index forced.")
-            # Use the provided loader to index the data
-            data_loader.index_data(self.collection)
-            print("Data loading complete.")
-        else:
-            print(f"Database loaded! Contains {self.collection.count()} vehicles.")
-
+    
     def _tokenize_model(self, model_name):
         """
         Helper to robustly tokenize model/trim names and remove stop words.
@@ -101,14 +84,16 @@ class VehicleVectorDB:
              return 0.0
         return len(intersection) / len(union)
 
-    def search_with_boosting(self, query_text, boost_targets, weights, top_k=5):
+    def search_with_boosting(self, query_text, boost_targets, weights, top_k=5, where=None, strict_model_match=None):
         """
         Performs Vector Search + Jaccard Similarity Boosting (Re-ranking).
         Boosts: Make, Model, Year, Trim (vs series/package), Style, Engine
+        Supports strict filtering via 'where' (Chroma) and 'strict_model_match' (Post-filter).
         """
         results = self.collection.query(
             query_texts=[query_text],
-            n_results=50 # Fetch wide
+            n_results=50, # Fetch wide
+            where=where
         )
         
         reranked_candidates = []
@@ -166,21 +151,39 @@ class VehicleVectorDB:
                 jaccard_score_engine = self._jaccard_similarity(target_engine_tokens, candidate_engine_tokens)
                 new_score -= (weights.get('engine', 0.0) * jaccard_score_engine)
 
-                reranked_candidates.append({
-                    "Vehicle Info": results['documents'][0][i],
-                    "Year": meta.get('year'),
-                    "Make": meta.get('make'),
-                    "Model": meta.get('model'),
-                    "series": meta.get('series', 'N/A'),
-                    "package": meta.get('package', 'N/A'),
-                    "style": meta.get('style', 'N/A'),
-                    "engine": meta.get('engine', 'N/A'),
-                    "Match Distance": round(new_score, 4)
-                })
-        
+                # STRICT MODEL FILTERING
+                # If strict_model_match is set, only keep candidates where the model name matches significantly
+                keep_candidate = True
+                if strict_model_match:
+                    target_model_tokens_strict = self._tokenize_model(strict_model_match)
+                    # Require that ALL tokens in the target model are present in the candidate
+                    # This prevents "R1S" matching "R1T" (where 's' is missing from 'R1T')
+                    if not target_model_tokens_strict.issubset(candidate_model_tokens):
+                         keep_candidate = False
+                
+                if keep_candidate:
+                    canddidate = {
+                        "Vehicle Info": results['documents'][0][i],
+                        "year": boost_targets.get('year', meta.get('year')),
+                        "make": meta.get('make'),
+                        "model": meta.get('model'),
+                        "grg": meta.get('grg', 'N/A'),
+                        "drg": meta.get('drg', 'N/A'),
+                        "vsd": meta.get('vsd', 'N/A'),
+                        "lrg": meta.get('lrg', 'N/A'),
+                        "Match Distance": round(new_score, 4)
+                    }
+                    if meta.get('series'):
+                        canddidate['series'] = meta.get('series')
+                    if meta.get('package'):
+                        canddidate['package'] = meta.get('package')
+                    if meta.get('style'):
+                        canddidate['style'] = meta.get('style')
+                    if meta.get('engine'):
+                        canddidate['engine'] = meta.get('engine')
+                    reranked_candidates.append(canddidate) 
         reranked_candidates.sort(key=lambda x: x['Match Distance'])
-        final_results_df = pd.DataFrame(reranked_candidates[:top_k])
-        return self._format_results(final_results_df)
+        return reranked_candidates[:top_k]
 
     def search_by_text(self, query_text, top_k=5, boost_weights=None):
         """
@@ -240,7 +243,11 @@ class VehicleVectorDB:
         trim = vin_data.get('trim', '')
         engine = vin_data.get('engine', '') # Get engine
 
-        query = f"Find me exact or similar vehicles like this {year_str} {make} {model} {style} {trim} {engine}"
+        query = f"""
+                Find me exact or similar vehicles like this {year_str} {make} {model} {style} {trim} {engine},  
+                make sure both make and model match ,
+                if there is a different make or model, if both do not match your critierie then ignore
+        """
         
         if boosting:
             boost_targets = {
@@ -251,12 +258,20 @@ class VehicleVectorDB:
                 'style': style,
                 'engine': engine
             }
-            weights = boost_weights if boost_weights is not None else {
-                'make': 0.5, 'model': 0.3, 'year': 0.15, 'trim': 0.2,
-                'style': 0.1, 'engine': 0.1 # Low default boost
-            }
+            weights = boost_weights if boost_weights is not None else {'make': 1.0, 'model': 2.0, 'year': 1.0, 'trim': 1.5, 'style': 0.1, 'engine': 0.5} 
+
             print(f"\nUsing Search Query: '{query}' (with boosting: {weights})")
-            return self.search_with_boosting(query, boost_targets, weights)
+            
+            # Use strict filtering for Make and Model
+            where_clause = {"make": make} if make else None
+            
+            return self.search_with_boosting(
+                query, 
+                boost_targets, 
+                weights, 
+                where=where_clause,
+                strict_model_match=model
+            )
         else:
             print(f"\nUsing Search Query: '{query}' (boosting disabled)")
             results = self.collection.query(
@@ -273,43 +288,45 @@ class VehicleVectorDB:
         # Define all columns we want to see
         all_cols = [
             "Vehicle Info", "Year", "Make", "Model", "series", "package", 
-            "style", "engine", "Match Distance"
+            "style", "engine", "Match Distance","drg","grg","vsd","lrg"
         ]
         
         # Handle if results are already a DataFrame (from boosting)
-        if isinstance(results, pd.DataFrame):
-            for col in all_cols:
-                if col not in results.columns:
-                    results[col] = "N/A" # Add missing columns
-            return results[all_cols]
+        # if isinstance(results, pd.DataFrame):
+        #     for col in all_cols:
+        #         if col not in results.columns:
+        #             results[col] = "N/A" # Add missing columns
+        #     return results[all_cols]
             
         # Handle raw Chroma dict results
         hits = []
         if results['ids'] and len(results['ids']) > 0:
             for i in range(len(results['ids'][0])):
                 meta = results['metadatas'][0][i]
-                hits.append({
-                    "Vehicle Info": results['documents'][0][i],
-                    "Year": meta.get('year'),
-                    "Make": meta.get('make'),
-                    "Model": meta.get('model'),
+                hits.append({ 
+                    "year": meta.get('year'),
+                    "make": meta.get('make'),
+                    "model": meta.get('model'),
                     "series": meta.get('series', 'N/A'),
                     "package": meta.get('package', 'N/A'),
                     "style": meta.get('style', 'N/A'), 
-                    "engine": meta.get('engine', 'N/A'),
+                    "engine": meta.get('engine', 'N/A'), 
+                    "grg": meta.get('grg', 'N/A'), 
+                    "drg": meta.get('drg', 'N/A'),
+                    "vsd": meta.get('vsd', 'N/A'),
+                    "lrg": meta.get('lrg', 'N/A'),
                     "Match Distance": round(results['distances'][0][i], 4)
                 })
         
-        final_df = pd.DataFrame(hits)
-        # Ensure final DataFrame has all columns
-        for col in all_cols:
-            if col not in final_df.columns:
-                final_df[col] = "N/A"
-        return final_df[all_cols]
+        # final_df = pd.DataFrame(hits)
+        # # Ensure final DataFrame has all columns
+        # for col in all_cols:
+        #     if col not in final_df.columns:
+        #         final_df[col] = "N/A"
+        return hits
 
 # --- EXECUTION ---
-if __name__ == "__main__":
-
+def test_vehicle_rates(): 
     # --- 1. SHARED TEST DATA ---
     MERCEDES_EQB_2023 = {'make': 'MERCEDES-BENZ', 
                          'model': 'EQB-Class', 
@@ -331,7 +348,7 @@ if __name__ == "__main__":
       "primaryUse": "Other Use",
       "annualMiles": "13,000"}
 
-    FIELDS_TO_DISPLAY = ['Year', 'Make', 'Model', 'series','package', 'style', 'engine', 'Match Distance'] 
+    FIELDS_TO_DISPLAY = ['Year', 'Make', 'Model', 'series','package', 'style', 'engine', 'Match Distance','grg','drg','vsd','lrg'] 
     SCORING_RECOMMENDATIONS = " Match with Year Make Model should be boosted when scoring"
 
     MONGO_CONNECTION_URI = "mongodb://localhost:27017/" # Or your Atlas string
@@ -340,71 +357,73 @@ if __name__ == "__main__":
     MONGO_REBUILD_DB = False 
      # --- CSV Configuration ---
     RATINGS_FILE = "/Users/zubeydeyararbas/ml/insurance-quotes/Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv"
- 
-    use_loader = 'csv'
-    try:
-        if use_loader == 'mongo':
-            mongo_loader = MongoDataLoader(
-                mongo_uri=MONGO_CONNECTION_URI,
-                db_name=MONGO_DB_NAME,
-                collection_name=MONGO_COLLECTION_NAME
-            )
-            mongo_rates_db = "./vehicle_rates_db_mongo"     
-            abstract_loader = mongo_loader
-            abstract_db_folder = mongo_rates_db
-             # --- MONGO DB LOADER TEST ---
-            print("\n" + "="*50)
-            print("STARTING MONGO DB LOADER TEST")
-            print("="*50)
-        else:
-            csv_loader = CsvDataLoader(RATINGS_FILE)
-            csv_rates_db = "./vehicle_rates_csv"
-            abstract_loader = csv_loader
-            abstract_db_folder = csv_rates_db
-              # --- CSV LOADER TEST ---
-            print("\n" + "="*50)
-            print("STARTING CsvDataLoader  LOADER TEST")
-            print("="*50)
+    abstract_db_folder = "./vehicle_rates_csv"
+    rates_app = VehicleRatesVectorDB( 
+        db_folder=abstract_db_folder     
+    )
 
-        rates_app = VehicleVectorDB(
-            data_loader=abstract_loader,
-            db_folder=abstract_db_folder, # Use a dedicated folder
-            force_reindex=MONGO_REBUILD_DB
-        )
-
-
-        # Test 1: Semantic Search
-        print("\n--- Test 1: User Question ---")
-        question = "Find me a safe hybrid Audi sedan"
-        print(f"Asking: '{question}'...")
-        print(rates_app.search_by_text(question)[FIELDS_TO_DISPLAY])
-
-        # Test 2: Search by JSON (Text Search)
-        question = f"Find me exact or similar vehicles like this {JSON_VEHICLE_TEST} {SCORING_RECOMMENDATIONS}"
-        print(f"\n---  Test 2: Search by JSON (Text Search) ---")
-        print(f"Asking: '{question}'...")
-        print(rates_app.search_by_text(question)[FIELDS_TO_DISPLAY])
+    custom_weights_vin = {'make': 1.0, 'model': 2.0, 'year': 1.0, 'trim': 1.5, 'style': 0.1, 'engine': 0.5}
+    print(f"Using custom weights: {custom_weights_vin}")
+    
+    print("\n---  Test 1: VIN Data Match Mercedes EQB-Class (Boosted) ---")
+    results1 = rates_app.search_by_vin_data(MERCEDES_EQB_2023, boosting=True,boost_weights=custom_weights_vin)
+    if not results1.empty:
+        print(results1[FIELDS_TO_DISPLAY])
+    else:
+        print("No matches found.")
         
-        # Test 3: Search by VIN Data (Boosted)
-        print("\n---  Test 3: VIN Data Match Mercedes EQB-Class (Boosted) ---")
-        results2 = rates_app.search_by_vin_data(MERCEDES_EQB_2023, boosting=True)
-        if not results2.empty:
-            print(results2[FIELDS_TO_DISPLAY])
-        else:
-            print("No matches found.")
-            
-        # Test 4: Search by VIN Data (Custom Boosting)
-        print("\n---  Test 4: VIN Data Match Mercedes EQB-Class (Custom Boosting) ---")
-        custom_weights_vin = {'make': 1.0, 'model': 2.0, 'year': 1.0, 'trim': 1.5, 'style': 0.1, 'engine': 0.5}
-        print(f"Using custom weights: {custom_weights_vin}")
-        results3 = rates_app.search_by_vin_data(MERCEDES_EQB_2023, boosting=True, boost_weights=custom_weights_vin)
-        if not results3.empty:
-            print(results3[FIELDS_TO_DISPLAY])
-        else:
-            print("No matches found.")
+    RIVIAN_R1S_2025 = {
+        'make': 'RIVIAN',
+        'model': 'R1S',
+        'year': 2025,  # Future year
+        'style': 'Sport Utility Vehicle',
+        'engine': 'ELECTRIC',
+        'vin': "W1N9M0KB6PN066911",
+        'garagingZipCode': "95134",
+        'primaryUse': "Other Use",
+        'annualMiles': "13,000"
+    }
 
-    except Exception as e:
-        print(f"\n---!! TEST FAILED !!---")
-        print(f"Error: {e}")
-        print("Please check Mongo connection strings or file paths.")
- 
+    print(f"RIVIAN Using custom weights: {custom_weights_vin}")
+    resultsRivian = rates_app.search_by_vin_data(RIVIAN_R1S_2025, boosting=True, boost_weights=custom_weights_vin)
+    if not resultsRivian.empty:
+        print(resultsRivian[FIELDS_TO_DISPLAY])
+    else:
+        print("No matches found.")
+  
+# GRG (Comprehensive Rating Group): Groups vehicles for comprehensive (theft, fire, hail) coverage, often based on how likely they are to be stolen or damaged by non-collision events.
+# DRG (Collision Rating Group): Groups vehicles for collision coverage, considering crashworthiness and repair costs, says.
+# VSD (Vehicle Safety Discounts): Identifies vehicles that qualify for discounts due to built-in safety features, according to American Property Casualty Insurance Association and State Farm.
+# LRG (Liability Rating Group): Groups vehicles for liability coverage (bodily injury/property damage), factoring in crash frequency and severity, according to American Property Casualty Insurance Association and State Farm. 
+
+# -------------------------------------------------
+# 3. SINGLETON INSTANCE & ACCESSORS
+# -------------------------------------------------
+
+_vehicle_rates_db_instance: Optional['VehicleRatesVectorDB'] = None
+
+def initialize_vehicle_rates_db(db_folder: str = "./vehicle_rates_rag") -> None:
+    """
+    Initialize the global VehicleRatesVectorDB instance.
+    Should be called once at application startup.
+    """
+    global _vehicle_rates_db_instance
+    if _vehicle_rates_db_instance is None:
+        _vehicle_rates_db_instance = VehicleRatesVectorDB(db_folder=db_folder)
+        print("Global VehicleRatesVectorDB initialized.")
+    else:
+        print("Global VehicleRatesVectorDB already initialized.")
+
+def get_vehicle_rates_db() -> 'VehicleRatesVectorDB':
+    """
+    Get the global VehicleRatesVectorDB instance.
+    Raises RuntimeError if not initialized.
+    """
+    global _vehicle_rates_db_instance
+    if _vehicle_rates_db_instance is None:
+        # Fallback for scripts or tests that might not have called initialize
+        # But in production, initialize should be called explicitly
+        print("Warning: VehicleRatesVectorDB lazy initialization triggered.")
+        initialize_vehicle_rates_db()
+        
+    return _vehicle_rates_db_instance
