@@ -155,7 +155,9 @@ class VehicleLookupService:
             (self.vehicle_data['BODYSTYLE'].fillna('') == style) &
             (self.vehicle_data['ENGINE'].fillna('') == engine)
         ]
-        
+        # TODO. 
+        if not vehicle_data:
+             vehicle_data = fetchVehicleDataUsingRAG(year, make, model, series, package, style, engine)
         if len(vehicle_data) > 0:
             row = vehicle_data.iloc[0]
             return {

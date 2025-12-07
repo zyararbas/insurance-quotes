@@ -4,6 +4,12 @@ __pycache__/
 *$py.class
 __init__.py
 
+vehicle_db/
+chromadb/
+vehicle_rates_csv/
+vehicle_rates_rag/
+vehicle_rates_rag_csv/  
+
 .vscode/
 
 # C extensions

@@ -3,13 +3,13 @@ import logging
 from typing import Dict, List, Optional
 from app.utils.data_loader import DataLoader        
 from app.models.models import Vehicle, Usage
-
+from app.services.vector_databases.vehicle_rates_search import get_vehicle_rates_db 
 logger = logging.getLogger(__name__)
 
 class VehicleFactorLookupService:
     """
     Microservice for vehicle factor lookups.
-    Handles vehicle rating groups, model year factors, and LRG factors.
+    Handles vehicle rating groups, model year factors, and LRG factors. 
     """
     
     def __init__(self, carrier_config: dict):
@@ -21,6 +21,7 @@ class VehicleFactorLookupService:
         self.fallback_vehicle_rating_groups: pd.DataFrame = None
         self.model_year_factors: pd.DataFrame = None
         self.lrg_factors: pd.DataFrame = None
+        self.vehicle_rates_vector_db = get_vehicle_rates_db()
         
     def initialize(self):
         """Loads all vehicle factor data tables."""
@@ -65,11 +66,29 @@ class VehicleFactorLookupService:
                 logger.info(f"Vehicle rating groups for {lookup_key}: {rating_groups}")
                 return rating_groups
             else:
-                # Try fallback with fewer components
-                fallback_key = f"{vehicle.year}_{vehicle.make}_{vehicle.model}"
-                fallback_match = self.fallback_vehicle_rating_groups[
-                    self.fallback_vehicle_rating_groups['vehicle_key'] == fallback_key
-                ]
+                # Try fetching rating groups from VehicleRateSearch
+                # vehicle_rate_search = VehicleRateSearch()
+                # vehicle_rate_search.initialize()
+                print("No search results found")
+                vin_data = vehicle.dict()
+                search_results = self.vehicle_rates_vector_db.search_by_vin_data(vin_data) 
+                
+                if search_results:
+                    top_result = search_results[0]
+                    rating_groups = {
+                        'drg': int(top_result['drg']),
+                        'grg': int(top_result['grg']),
+                        'vsd': str(top_result['vsd']),
+                        'lrg': int(top_result['lrg']) 
+                    }
+                    logger.info(f"Vehicle rating groups for {lookup_key}: {rating_groups}")
+                    return rating_groups
+                else:
+                    # Try fallback with fewer components
+                    fallback_key = f"{vehicle.year}_{vehicle.make}_{vehicle.model}"
+                    fallback_match = self.fallback_vehicle_rating_groups[
+                        self.fallback_vehicle_rating_groups['vehicle_key'] == fallback_key
+                    ]
                 
                 if not fallback_match.empty:
                     rating_groups = {

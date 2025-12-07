@@ -81,7 +81,6 @@ class VehicleSearchService:
             
             # Step 2: Determine search criteria
             search_criteria = self._determine_search_criteria(vin_data, make, model, year)
-            
             # Step 3: Validate search criteria
             if not self._validate_search_criteria(search_criteria):
                 return {
@@ -158,6 +157,8 @@ class VehicleSearchService:
             'make': self._clean_text(vehicle_data.get('make', '')),
             'model': self._clean_text(vehicle_data.get('model', '')),
             'year': self._parse_year(vehicle_data.get('model_year', '')),
+            'series': self._clean_text(vehicle_data.get('series', '')),
+            'trim': self._clean_text(vehicle_data.get('trim', '')), 
             'body_class': self._clean_text(vehicle_data.get('body_class', '')),
             'drive_type': self._clean_text(vehicle_data.get('drive_type', '')),
             'fuel_type': self._clean_text(vehicle_data.get('fuel_type_-_primary', '')),
@@ -166,13 +167,7 @@ class VehicleSearchService:
             'doors': self._parse_number(vehicle_data.get('doors', '')),
             'windows': self._parse_number(vehicle_data.get('windows', '')),
             'wheels': self._parse_number(vehicle_data.get('wheels', '')),
-            'gvwr': self._clean_text(vehicle_data.get('gvwr', '')),
-            'series': self._clean_text(vehicle_data.get('series', '')),
-            'trim': self._clean_text(vehicle_data.get('trim', '')),
-            'plant_city': self._clean_text(vehicle_data.get('plant_city', '')),
-            'plant_state': self._clean_text(vehicle_data.get('plant_state', '')),
-            'plant_country': self._clean_text(vehicle_data.get('plant_country', '')),
-            'lookup_timestamp': datetime.now().isoformat()
+            'gvwr': self._clean_text(vehicle_data.get('gvwr', ''))
         }
         
         # Remove empty values
