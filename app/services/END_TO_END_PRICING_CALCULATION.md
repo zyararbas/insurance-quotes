@@ -18,59 +18,78 @@ This document details the complete flow of the insurance pricing calculation sys
 The pricing calculation requires a `RatingInput` object containing the following information:
 
 ### Core Information
-- **carrier**: Insurance carrier (e.g., "STATEFARM")
-- **state**: State code (e.g., "CA")
-- **zip_code**: 5-digit ZIP code for territory factor lookup
+- **carrier**: Insurance carrier (e.g., "STATEFARM") - *Optional, defaults to "STATEFARM"*
+- **state**: State code (e.g., "CA") - **Required**
+- **zip_code**: 5-digit ZIP code for territory factor lookup - **Required**
 
 ### Vehicle Information (`Vehicle` object)
-- **year**: Vehicle year (1980-2025)
-- **make**: Vehicle make (e.g., "TOYOTA")
-- **model**: Vehicle model (e.g., "CAMRY")
-- **series**: Optional vehicle series
-- **package**: Optional vehicle package
-- **style**: Optional vehicle style
-- **engine**: Optional engine specification
-- **msrp**: Optional MSRP value
+- **year**: Vehicle year (1980-2025) - **Required**
+- **make**: Vehicle make (e.g., "TOYOTA") - **Required**
+- **model**: Vehicle model (e.g., "CAMRY") - **Required**
+- **series**: Optional vehicle series (default: "")
+- **package**: Optional vehicle package (default: "")
+- **style**: Optional vehicle style (default: "")
+- **engine**: Optional engine specification (default: "")
+- **msrp**: Optional MSRP value (default: None)
 
-### Coverage Information (`Coverages` object)
-Each coverage type (BIPD, COLL, COMP, MPC, UM) can have:
-- **selected**: Boolean indicating if coverage is selected
-- **limits**: Coverage limits (string format, e.g., "15/30/5" for BIPD)
+### Coverage Information (`Coverages` object) - *Optional*
+If `coverages` is not provided or is `None`, the following defaults are applied:
+- **BIPD**: 100/300 limits (BI: 100K/300K, PD: 100K) - *Always gets default if not provided*
+- **UM**: 100/300 limits
+- **COLL**: $500 deductible
+- **COMP**: $500 deductible
+- **MPC**: $5000 limits
+
+If `coverages` is provided:
+- **BIPD**: If `None`, defaults to 100/300 limits (required coverage)
+- **COLL, COMP, MPC, UM**: If `None`, coverage is declined (no default applied)
+
+Each coverage type can have:
+- **selected**: Boolean indicating if coverage is selected (default: true)
+- **limits**: Coverage limits (string format, e.g., "100/300" for BIPD)
 - **deductible**: Deductible amount (integer, e.g., 500)
 
-### Driver Information (`Driver` objects - List)
+### Driver Information (`Driver` objects - List) - **At least 1 required**
 Each driver must include:
-- **driver_id**: Unique identifier for the driver
-- **years_licensed**: Years licensed to drive (0-80)
-- **safety_record_level**: Optional safety record level (0-30). If not provided, will be calculated from violations
-- **percentage_use**: Percentage of vehicle use by this driver (0-100)
-- **assigned_driver**: Boolean indicating if driver is assigned to vehicle
-- **age**: Optional driver age (16-100)
-- **marital_status**: Optional marital status ('S' or 'M')
-- **violations**: List of violations/accidents, each containing:
+- **driver_id**: Unique identifier for the driver - **Required**
+- **years_licensed**: Years licensed to drive (0-80) - **Required**
+
+Optional driver fields (with defaults):
+- **percentage_use**: Percentage of vehicle use by this driver (0-100) - *Optional, default: 100.0*
+- **assigned_driver**: Boolean indicating if driver is assigned to vehicle - *Optional, default: True*
+- **age**: Optional driver age (16-100) - *Optional, no default*
+- **marital_status**: Optional marital status ('S' or 'M') - *Optional, no default*
+- **violations**: List of violations/accidents - *Optional, default: empty list []*
   - **type**: Violation type ('Chargable Accident', 'Minor Moving Voilation', 'Major Violation')
   - **date**: Date of violation
   - **points_added**: Points added for the violation
 
+**Note**: `safety_record_level` is **always calculated** from violations and cannot be set manually. It is computed using time decay based on the violations list.
+
 ### Usage Information (`Usage` object)
-- **annual_mileage**: Annual mileage (integer, >= 0)
-- **type**: Usage type ('Pleasure / Work / School', 'Business', 'Farm')
-- **single_automobile**: Boolean indicating if this is the only automobile
+- **annual_mileage**: Annual mileage (integer, >= 0) - **Required**
+- **type**: Usage type ('Pleasure / Work / School', 'Business', 'Farm') - *Optional, default: 'Pleasure / Work / School'*
+- **single_automobile**: Boolean indicating if this is the only automobile - *Optional, calculated from vehicle_count if not provided*
 
-### Discounts (`Discounts` object)
-- **car_safety_rating**: Optional car safety rating
-- **good_driver**: Boolean for good driver discount
-- **good_student**: Boolean for good student discount
-- **inexperienced_driver_education**: Boolean for driver education discount
-- **mature_driver_course**: Boolean for mature driver course discount
-- **multi_line**: Optional multi-line discount type
-- **student_away_at_school**: Boolean for student away at school discount
-- **loyalty_years**: Number of years with carrier (integer)
+### Additional Fields
+- **vehicle_count**: Total number of vehicles on policy (integer, >= 1) - *Optional, default: 1*
+  - Used to calculate `single_automobile`: if `vehicle_count = 1` then `single_automobile = True`, otherwise `False`
+  - If `single_automobile` is not provided, it is automatically calculated from `vehicle_count`
 
-### Special Factors (`SpecialFactors` object)
-- **federal_employee**: Boolean for federal employee discount
-- **transportation_network_company**: Boolean for transportation network company factor
-- **transportation_of_friends**: Boolean for transportation of friends factor
+### Discounts (`Discounts` object) - **Required object, all fields have defaults**
+- **car_safety_rating**: Optional car safety rating (default: None)
+- **good_driver**: Boolean for good driver discount (default: False)
+- **good_student**: Boolean for good student discount (default: False)
+- **inexperienced_driver_education**: Boolean for driver education discount (default: False)
+- **mature_driver_course**: Boolean for mature driver course discount (default: False)
+- **multi_line**: Optional multi-line discount type (default: None)
+- **student_away_at_school**: Boolean for student away at school discount (default: False)
+- **loyalty_years**: Number of years with carrier (default: 0)
+
+### Special Factors (`SpecialFactors` object) - **Required object, all fields have defaults**
+- **federal_employee**: Boolean for federal employee discount (default: False)
+- **transportation_network_company**: Boolean for transportation network company factor (default: False)
+- **transportation_of_friends**: Boolean for transportation of friends factor (default: False)
 
 ---
 
@@ -246,45 +265,35 @@ Each driver must include:
 
 ```json
 {
-  "carrier": "STATEFARM",
   "state": "CA",
   "zip_code": "90001",
   "vehicle": {
     "year": 2018,
     "make": "FORD",
-    "model": "F150",
-    "series": "",
-    "package": "",
-    "style": "",
-    "engine": ""
-  },
-  "coverages": {
-    "BIPD": {
-      "selected": true,
-      "limits": "15/30/5"
-    },
-    "COLL": null,
-    "COMP": null,
-    "MPC": null,
-    "UM": null
+    "model": "F150"
   },
   "drivers": [
     {
       "driver_id": "driver1",
-      "years_licensed": 5,
-      "percentage_use": 100.0,
-      "assigned_driver": true
+      "years_licensed": 5
     }
   ],
-  "discounts": {},
-  "special_factors": {},
   "usage": {
-    "annual_mileage": 10000,
-    "type": "Pleasure / Work / School",
-    "single_automobile": false
-  }
+    "annual_mileage": 10000
+  },
+  "discounts": {},
+  "special_factors": {}
 }
 ```
+
+**Note**: In this minimal example:
+- `carrier` defaults to "STATEFARM"
+- `coverages` defaults to full State Farm coverage (BIPD: 100/300, UM: 100/300, COLL: $500, COMP: $500, MPC: $5000)
+- `drivers[0].percentage_use` defaults to 100.0
+- `drivers[0].assigned_driver` defaults to True
+- `drivers[0].violations` defaults to empty list []
+- `usage.type` defaults to "Pleasure / Work / School"
+- `vehicle_count` defaults to 1, so `usage.single_automobile` defaults to True
 
 ### Example with Safety Record Calculation
 
@@ -365,7 +374,7 @@ Each driver must include:
 - **UM Limits**: Format as "BI/PD" (e.g., "100/300")
 - **MPC Limits**: Integer as string (e.g., "5000" for $5,000)
 - **Deductibles**: Integer value (e.g., 250, 500, 1000, 2500)
-- **Violations**: If provided, `safety_record_level` will be calculated automatically with time decay
+- **Violations**: `safety_record_level` is **always calculated** from violations with time decay. It cannot be set manually. If no violations are provided (empty list), the safety record level is 0 (clean record).
 - **Driver Percentage Use**: Must sum to 100% across all drivers
 - **Multi-line Discount**: Values can be "home", "life", or null
 - **Usage Type**: Must be exactly one of: "Pleasure / Work / School", "Business", or "Farm"
@@ -444,10 +453,10 @@ For each coverage and each driver:
    - Lookup factor based on driver's percentage of vehicle use
 
 4. **Safety Record Factor** (`DriverFactorLookupService.get_safety_record_factor`)
-   - If violations exist or safety_record_level not provided:
-     - Calculate safety record level using `SafetyRecordService.calculate_safety_record_level`
-     - Applies time decay to violation points
-   - Lookup safety record factor based on calculated/provided level
+   - Safety record level is **always calculated** from violations using `SafetyRecordService.calculate_safety_record_level`
+   - Uses time decay to determine current points from violation history
+   - Clean drivers (no violations) have a safety record level of 0
+   - Lookup safety record factor based on calculated level
 
 5. **Single Automobile Factor** (`DriverFactorLookupService.get_single_automobile_factor`)
    - Lookup factor based on usage.single_automobile flag
