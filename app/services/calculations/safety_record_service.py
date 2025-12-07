@@ -47,8 +47,11 @@ class SafetyRecordService:
         # Clean driver starts at level 0
         additional_points = 0
         
+        # Ensure violations list exists (should never be None due to model validation)
+        violations_list = driver.violations if driver.violations is not None else []
+        
         # Calculate current points from all violations
-        for violation in driver.violations:
+        for violation in violations_list:
             current_points = self._calculate_current_violation_points(
                 violation, assessment_date
             )

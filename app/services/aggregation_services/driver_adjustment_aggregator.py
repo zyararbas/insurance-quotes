@@ -56,16 +56,11 @@ class DriverAdjustmentAggregator:
                 percentage_use_factor = self.driver_lookup_service.get_percentage_use_factor(coverage, driver)
                 driver_factor_breakdown['percentage_use_factor'] = percentage_use_factor
                 
-                # 4. Driving safety record factor (calculate actual safety level if violations present)
-                if driver.safety_record_level is None or driver.violations:
-                    # Calculate safety record level from violations with time decay
-                    calculated_safety_level = self.safety_record_service.calculate_safety_record_level(driver)
-                    driver_factor_breakdown['calculated_safety_level'] = calculated_safety_level
-                    safety_record_factor = self.driver_lookup_service.get_safety_record_factor(coverage, calculated_safety_level)
-                else:
-                    # Use provided safety record level
-                    safety_record_factor = self.driver_lookup_service.get_safety_record_factor(coverage, driver.safety_record_level)
-                    driver_factor_breakdown['provided_safety_level'] = driver.safety_record_level
+                # 4. Driving safety record factor (always calculate from violations)
+                # Safety record level is always calculated from violations, never from provided value
+                calculated_safety_level = self.safety_record_service.calculate_safety_record_level(driver)
+                driver_factor_breakdown['calculated_safety_level'] = calculated_safety_level
+                safety_record_factor = self.driver_lookup_service.get_safety_record_factor(coverage, calculated_safety_level)
                 
                 driver_factor_breakdown['safety_record_factor'] = safety_record_factor
                 
@@ -113,15 +108,11 @@ class DriverAdjustmentAggregator:
             safety_info = {}
             for driver_result in driver_results:
                 driver_factors = driver_result['factors']
+                # Safety record level is always calculated from violations
                 if 'calculated_safety_level' in driver_factors:
                     safety_info[driver_result['driver_id']] = {
                         'safety_record_level': driver_factors['calculated_safety_level'],
                         'calculated': True
-                    }
-                elif 'provided_safety_level' in driver_factors:
-                    safety_info[driver_result['driver_id']] = {
-                        'safety_record_level': driver_factors['provided_safety_level'],
-                        'calculated': False
                     }
             
             results[coverage] = {

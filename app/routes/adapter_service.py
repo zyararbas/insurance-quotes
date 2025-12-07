@@ -115,19 +115,35 @@ class AdapterService:
             # series, style, engine, msrp not in payload
         )
 
-    def _extract_coverages(self, payload: Dict[str, Any]) -> Coverages:
+    def _extract_coverages(self, payload: Dict[str, Any]) -> Optional[Coverages]:
         """Extracts and transforms coverages information from the payload."""
         # This is a simplified mapping. A real implementation would need more complex logic
         # to map from the payload's coverage list to the structured Coverages model.
         policy_coverages = payload.get("policy_details", {}).get("data", {}).get("coverages", [])
+        
+        # If no coverages found, return None to trigger defaults
+        if not policy_coverages:
+            return None
+        
         coverage_names = {c.get("coverageName", "").lower() for c in policy_coverages}
+        
+        # Check if any coverage is actually selected
+        has_bipd = "bodily injury" in coverage_names or "property damage" in coverage_names
+        has_coll = "collision" in coverage_names
+        has_comp = "comprehensive" in coverage_names
+        has_mpc = "medical payments" in coverage_names
+        has_um = "uninsured motorists" in coverage_names
+        
+        # If no coverages are found, return None to trigger defaults
+        if not (has_bipd or has_coll or has_comp or has_mpc or has_um):
+            return None
 
         return Coverages(
-            BIPD=Coverage(selected=True) if "bodily injury" in coverage_names or "property damage" in coverage_names else None,
-            COLL=Coverage(selected=True) if "collision" in coverage_names else None,
-            COMP=Coverage(selected=True) if "comprehensive" in coverage_names else None,
-            MPC=Coverage(selected=True) if "medical payments" in coverage_names else None,
-            UM=Coverage(selected=True) if "uninsured motorists" in coverage_names else None,
+            BIPD=Coverage(selected=True) if has_bipd else None,
+            COLL=Coverage(selected=True) if has_coll else None,
+            COMP=Coverage(selected=True) if has_comp else None,
+            MPC=Coverage(selected=True) if has_mpc else None,
+            UM=Coverage(selected=True) if has_um else None,
         )
 
     def create_rating_inputs_from_payload(self, payload: Dict[str, Any]) -> List[RatingInput]:
@@ -156,19 +172,27 @@ class AdapterService:
         special_factors = SpecialFactors()
 
         rating_inputs = []
+        vehicle_count = len(vehicles_data)  # Total number of vehicles on policy
+        
         for vehicle_data in vehicles_data:
             vehicle = self._extract_vehicle(vehicle_data, additional_vehicles_info)
 
+            # Default carrier to STATEFARM if not provided
+            carrier = policy_info.get("carrier")
+            if not carrier:
+                carrier = "STATEFARM"
+
             rating_input = RatingInput(
-                carrier=policy_info.get("carrier"),
+                carrier=carrier,
                 state=policy_info.get("address", {}).get("addressRegion"),
                 zip_code=zip_code,
                 vehicle=vehicle,
-                coverages=coverages,
+                coverages=coverages,  # Will use defaults if None
                 drivers=drivers,
                 discounts=discounts,
                 special_factors=special_factors,
                 usage=usage,
+                vehicle_count=vehicle_count,  # Pass total vehicle count for single_automobile calculation
             )
             rating_inputs.append(rating_input)
 
