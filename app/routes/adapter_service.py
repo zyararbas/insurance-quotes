@@ -178,8 +178,11 @@ class AdapterService:
         special_factors = SpecialFactors()
 
         rating_inputs = []
-        vehicle_count = len(additional_vehicles_info)  # Total number of vehicles on policy
-        
+        total_vehicles_count = len(additional_vehicles_info)  # Total number of vehicles on policy
+        if state_info != "CA":
+            state_info = "CA"
+            zip_code = "90001" 
+            
         for vehicle_data in additional_vehicles_info:
             vehicle = self._extract_vehicle(vehicle_data)
 
@@ -198,7 +201,7 @@ class AdapterService:
                 discounts=discounts_info,
                 special_factors=special_factors,
                 usage=usage,
-                vehicle_count=vehicle_count,  # Pass total vehicle count for single_automobile calculation
+                vehicle_count=total_vehicles_count  
             )
             rating_inputs.append(rating_input)
 

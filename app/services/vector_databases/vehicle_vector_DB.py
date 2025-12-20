@@ -14,7 +14,7 @@ MODEL_STOP_WORDS = {
 }
 
 class VehicleVectorDB:
-    def __init__(self, ratings_csv_path, db_folder="./vehicle_db", force_reindex=False):
+    def __init__(self, ratings_csv_path, db_folder="./vehicle_rates_rag2", force_reindex=False):
         """
         Initializes the Local Vector Database.
         force_reindex: Set to True to delete the old DB and rebuild it.
@@ -343,8 +343,8 @@ MERCEDES_EQB_2023 = {'make': 'MERCEDES-BENZ',
 
 if __name__ == "__main__":
     # 1. Initialize
-    app = VehicleVectorDB("/Users/zubeydeyararbas/ml/insurance-quotes/Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv")
-    fields = ['Year', 'Make', 'Model', 'series','package', 'style','Match Distance'] 
+    app = VehicleVectorDB("/Users/zubeydeyararbas/ml/insurance-quotes/Data/California/STATEFARM_CA_Insurance__tables/car_factors/auto_ratings_2024_2001.csv")
+    fields = ['MAKE', 'MODEL', 'SERIES','OPTIONPACKAGE', 'BODYSTYLE','MATCH DISTANCE','YEAR'] 
     scoring_recommendations = " Match with Year Make Model should be boosted when scoring"
 
     # 2. Test: Semantic Search

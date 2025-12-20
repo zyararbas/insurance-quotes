@@ -38,7 +38,7 @@ class IDataLoader(ABC):
 # 2. THE MAIN VEHICLE VECTOR DB CLASS
 # -------------------------------------------------
 class VehicleRatesVectorDB:
-    def __init__(self, db_folder="./vehicle_db" ):
+    def __init__(self, db_folder="./vehicle_rates_rag"):
         """
         Initializes the Local Vector Database.
         It now accepts a 'data_loader' to handle indexing.
@@ -242,9 +242,10 @@ class VehicleRatesVectorDB:
         style = vin_data.get('body_class', vin_data.get('style', '')) 
         trim = vin_data.get('trim', '')
         engine = vin_data.get('engine', '') # Get engine
+        doors = vin_data.get('doors', '') # Get engine
 
         query = f"""
-                Find me exact or similar vehicles like this {year_str} {make} {model} {style} {trim} {engine},  
+                Find me exact or similar vehicles like this year {year_str} make {make} model {model} style {style} trim {trim} engine {engine} doors {doors},  
                 make sure both make and model match ,
                 if there is a different make or model, if both do not match your critierie then ignore
         """
@@ -256,7 +257,8 @@ class VehicleRatesVectorDB:
                 'model': model,
                 'trim': trim,
                 'style': style,
-                'engine': engine
+                'engine': engine,
+                'doors': doors
             }
             weights = boost_weights if boost_weights is not None else {'make': 1.0, 'model': 2.0, 'year': 1.0, 'trim': 1.5, 'style': 0.1, 'engine': 0.5} 
 
@@ -427,3 +429,18 @@ def get_vehicle_rates_db() -> 'VehicleRatesVectorDB':
         initialize_vehicle_rates_db()
         
     return _vehicle_rates_db_instance
+
+
+def test_mercedes():
+    db = get_vehicle_rates_db() 
+    vin_data = {'year': 2015, 
+    'make': 'MERCEDES-BENZ', 
+    'model': 'C-Class', 
+    'trim': '4-MATIC', 
+    'body_class': 'Sedan/Saloon', 
+    'drive_type': 'AWD/All-Wheel Drive', 
+    'engine_config': 'In-Line', 
+    'doors': 4
+    }
+    results = db.search_by_vin_data(vin_data)
+    print(results)

@@ -8,7 +8,6 @@ WORKDIR /app
 # Copy the requirements file into the container at /app
 # This is done early to leverage Docker's caching for dependencies
 COPY requirements.txt .
-COPY vehicle_rates_rag/ vehicle_rates_rag/ 
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt

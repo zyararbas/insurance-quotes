@@ -17,7 +17,7 @@ class VehicleLookupService:
     def _load_vehicle_data(self):
         """Load vehicle data if not already loaded."""
         if self.vehicle_data is None:
-            self.vehicle_data = self.data_loader.load_table('car_factors/State Farm Auto Ratings Cleaned 2024_2001 - Sheet1_cleaned.csv')
+            self.vehicle_data = self.data_loader.load_table('car_factors/auto_ratings_2024_2001.csv')
             logger.info("Vehicle data loaded for lookup service")
     
     def get_years(self) -> List[int]:
