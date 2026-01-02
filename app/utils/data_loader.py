@@ -51,10 +51,11 @@ class DataLoader:
         df = self.load_table('base_factors/CA_zip_territory_factors - Sheet1.csv')
         df = df.set_index('zip')
         return df
-
+    # Deprecated 
     def load_zip_territory_factors(self) -> pd.DataFrame:
         """Loads zip territory factors (alias for load_territory_factors)."""
-        return self.load_territory_factors()
+        # return self.load_territory_factors()
+        return
 
     def load_vehicle_ratings(self) -> pd.DataFrame:
         """Loads vehicle ratings groups."""

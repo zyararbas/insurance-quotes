@@ -112,7 +112,7 @@ def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
         return result
         
     except HTTPException:
-        raise
+        raise HTTPException(status_code=400, detail=f"Could not extract necessary Vehicle information")
     except Exception as e:
         logger.error(f"Vehicle spec orchestrator failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An internal error occurred: {e}")
@@ -138,7 +138,7 @@ async def create_quote(payload: Dict[str, Any]):
         return results
 
     except Exception as e:
-        logger.error(f"An error occurred during payload transformation: {e}", exc_info=True)
+        logger.error(f"An error occurred during payload transformation: {e} - payload {payload}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An internal error occurred during transformation: {e}")
 
 

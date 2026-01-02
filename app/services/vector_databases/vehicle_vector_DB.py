@@ -14,7 +14,7 @@ MODEL_STOP_WORDS = {
 }
 
 class VehicleVectorDB:
-    def __init__(self, ratings_csv_path, db_folder="./vehicle_rates_rag2", force_reindex=False):
+    def __init__(self, ratings_csv_path, db_folder="./vehicle_rates_rag", force_reindex=False):
         """
         Initializes the Local Vector Database.
         force_reindex: Set to True to delete the old DB and rebuild it.

@@ -181,8 +181,8 @@ class AdapterService:
         total_vehicles_count = len(additional_vehicles_info)  # Total number of vehicles on policy
         if state_info != "CA":
             state_info = "CA"
-            zip_code = "90001" 
-            
+            zip_code = payload.get("additional_info", {}).get("general_questions", {}).get("zip_code", "")
+
         for vehicle_data in additional_vehicles_info:
             vehicle = self._extract_vehicle(vehicle_data)
 
