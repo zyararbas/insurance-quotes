@@ -44,8 +44,8 @@ class DriverAdjustmentAggregator:
             for driver in drivers:
                 driver_factor_breakdown = {}
                 
-                # 1. Base driver factor
-                base_factor = self.driver_lookup_service.get_base_driver_factor(coverage, driver)
+                # 1. Base driver factor 
+                base_factor = self.driver_lookup_service.get_base_driver_factor(coverage, driver) # Updated to query mongo instea of CSV
                 driver_factor_breakdown['base_factor'] = base_factor
                 
                 # 2. Years licensed adjustment factor
