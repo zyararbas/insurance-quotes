@@ -5,6 +5,7 @@ from app.utils.data_loader import DataLoader
 
 logger = logging.getLogger(__name__)
 ZIP_TERRITORY_FACTORS_COLLECTION = "zip-territory-factors"
+
 BASE_RATES = {
     "BIPD": 841.98,
     "COLL": 869.39,

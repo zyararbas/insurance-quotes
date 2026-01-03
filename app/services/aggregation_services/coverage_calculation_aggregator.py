@@ -55,6 +55,9 @@ class CoverageCalculationAggregator:
             rating_input.zip_code, selected_coverages
         )
         logger.info(f"Base factors: {base_factors}")
+
+        # --------- DONE UNTIL NOW ------------------
+
         
         # Step 2: Calculate Driver Adjustment Factors
         logger.info("--- Step 2: Calculating Driver Adjustment Factors ---")

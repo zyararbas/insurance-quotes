@@ -7,7 +7,7 @@ from app.services.calculations.discount_service import DiscountService
 from app.models.models import SpecialFactors
 from app.models.models import Usage
 from app.models.models import Driver
-
+BASE_DRIVER_FACTOR_COLLECTION="base-driver-factors"
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class DriverFactorLookupService:
         
     def initialize(self):
         """Loads all driver factor data tables."""
-        self.base_driver_factors = self.data_loader.load_base_driver_factors()
+        # DEPRECATED self.base_driver_factors = self.data_loader.load_base_driver_factors()
         self.years_licensed_factors = self.data_loader.load_years_licensed_key()
         self.percentage_use_factors = self.data_loader.load_percentage_use_by_driver()
         self.driving_safety_record_factors = self.data_loader.load_driving_safety_record_rating_plan()
@@ -47,8 +47,9 @@ class DriverFactorLookupService:
         
     def get_base_driver_factor(self, coverage: str, driver: Driver) -> float:
         """Gets the base driver factor from the rating tables."""
-        if self.base_driver_factors is None:
-            self.initialize()
+        # Deprecated
+        # if self.base_driver_factors is None:
+        #     self.initialize()
             
         assigned_driver_str = 'Yes' if driver.assigned_driver else 'No'
         
@@ -69,13 +70,17 @@ class DriverFactorLookupService:
         if coverage == 'UM':
             coverage_key = 'U'
         
-        # Find matching row
-        match = self.base_driver_factors[
-            (self.base_driver_factors['Coverage'] == coverage_key) &
-            (self.base_driver_factors['Assigned Driver'] == assigned_driver_str) &
-            (self.base_driver_factors['Marital Status'] == lookup_marital_status) &
-            (self.base_driver_factors['Years Driving'] == lookup_years_driving)
-        ]
+        # Find matching row 
+        match_query = {"Coverage": coverage_key, "Assigned Driver": assigned_driver_str, "Marital Status": lookup_marital_status, "Years Driving": lookup_years_driving}
+        match = self.data_loader.storage_service.find(match_query,BASE_DRIVER_FACTOR_COLLECTION)
+
+        # Deprecated match from CSV
+        # match = self.base_driver_factors[
+        #     (self.base_driver_factors['Coverage'] == coverage_key) &
+        #     (self.base_driver_factors['Assigned Driver'] == assigned_driver_str) &
+        #     (self.base_driver_factors['Marital Status'] == lookup_marital_status) &
+        #     (self.base_driver_factors['Years Driving'] == lookup_years_driving)
+        # ]
 
         if not match.empty:
             factor = float(match['Factor'].iloc[0])
@@ -83,12 +88,18 @@ class DriverFactorLookupService:
             return factor
         else:
             # Fallback logic - use the same format as the working old service
-            fallback = self.base_driver_factors[
-                (self.base_driver_factors['Coverage'] == coverage_key) &
-                (self.base_driver_factors['Assigned Driver'] == assigned_driver_str) &
-                (self.base_driver_factors['Marital Status'] == 'All Not\n Specifically\n Listed') &
-                (self.base_driver_factors['Years Driving'] == 'All Not\n Specifically\n Listed')
-            ]
+            fallback_query = {"Coverage": coverage_key, "Assigned Driver": assigned_driver_str, "Marital Status": 'All Not\n Specifically\n Listed', "Years Driving": 'All Not\n Specifically\n Listed'}
+            fallback = self.data_loader.storage_service.find(fallback_query, BASE_DRIVER_FACTOR_COLLECTION)
+
+            #  Deprecated fallback from CSV
+
+            # fallback = self.base_driver_factors[
+            #     (self.base_driver_factors['Coverage'] == coverage_key) &
+            #     (self.base_driver_factors['Assigned Driver'] == assigned_driver_str) &
+            #     (self.base_driver_factors['Marital Status'] == 'All Not\n Specifically\n Listed') &
+            #     (self.base_driver_factors['Years Driving'] == 'All Not\n Specifically\n Listed')
+            # ]
+
             if not fallback.empty:
                 factor = float(fallback['Factor'].iloc[0])
                 logger.info(f"Base driver factor fallback for {coverage}: {factor}")

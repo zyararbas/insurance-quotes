@@ -123,6 +123,8 @@ class DataLoader:
     def load_base_driver_factors(self) -> pd.DataFrame:
         """Loads State Farm specific base driver factors."""
         df = self.load_table('driver_factors/base_driver_factors  - Sheet1.csv')
+        
+
         # Clean up whitespace in string columns used for matching
         for col in ['Marital Status', 'Years Driving']:
             if col in df.columns:
