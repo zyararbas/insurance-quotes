@@ -72,8 +72,8 @@ class DriverFactorLookupService:
         
         # Find matching row 
         match_query = {"Coverage": coverage_key, "Assigned Driver": assigned_driver_str, "Marital Status": lookup_marital_status, "Years Driving": lookup_years_driving}
-        match = self.data_loader.storage_service.find(match_query,BASE_DRIVER_FACTOR_COLLECTION)
-
+        match_result = self.data_loader.storage_service.find(match_query,BASE_DRIVER_FACTOR_COLLECTION)
+        match = match_result[0] if match_result else None    
         # Deprecated match from CSV
         # match = self.base_driver_factors[
         #     (self.base_driver_factors['Coverage'] == coverage_key) &
@@ -82,14 +82,15 @@ class DriverFactorLookupService:
         #     (self.base_driver_factors['Years Driving'] == lookup_years_driving)
         # ]
 
-        if not match.empty:
-            factor = float(match['Factor'].iloc[0])
+        if match:
+            factor = float(match['Factor'])
             logger.info(f"Base driver factor for {coverage}: {factor}")
             return factor
         else:
             # Fallback logic - use the same format as the working old service
             fallback_query = {"Coverage": coverage_key, "Assigned Driver": assigned_driver_str, "Marital Status": 'All Not\n Specifically\n Listed', "Years Driving": 'All Not\n Specifically\n Listed'}
-            fallback = self.data_loader.storage_service.find(fallback_query, BASE_DRIVER_FACTOR_COLLECTION)
+            fallback_result = self.data_loader.storage_service.find(fallback_query, BASE_DRIVER_FACTOR_COLLECTION)
+            fallback = fallback_result[0] if fallback_result else None    
 
             #  Deprecated fallback from CSV
 
@@ -100,8 +101,8 @@ class DriverFactorLookupService:
             #     (self.base_driver_factors['Years Driving'] == 'All Not\n Specifically\n Listed')
             # ]
 
-            if not fallback.empty:
-                factor = float(fallback['Factor'].iloc[0])
+            if fallback:
+                factor = float(fallback['Factor'])
                 logger.info(f"Base driver factor fallback for {coverage}: {factor}")
                 return factor
 
