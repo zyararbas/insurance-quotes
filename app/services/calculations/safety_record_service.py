@@ -6,6 +6,24 @@ from math import floor
 from app.utils.data_loader import DataLoader
 from app.models.models import Driver, Violation
 
+VIOLATION_SCORES = {
+    "Chargable Accident": {
+        "points_added": 6,
+        "decay_period": 6,
+        "decay_amount": 1,
+    },
+    "Minor Moving Voilation": {
+        "points_added": 5,
+        "decay_period": 5,
+        "decay_amount": 1,
+    },
+    "Major Violation": {
+        "points_added": 14,
+        "decay_period": 7,
+        "decay_amount": 2,
+    },
+}
+
 
 class SafetyRecordService:
     """
@@ -38,30 +56,22 @@ class SafetyRecordService:
         Returns:
             Safety record level (0-30, where 8 is clean record)
         """
-        if self.violation_scores is None:
-            self.initialize()
+        # if self.violation_scores is None:
+        #     self.initialize()
             
         if assessment_date is None:
             assessment_date = date.today()
-            
-        # Clean driver starts at level 0
+
         additional_points = 0
-        
-        # Ensure violations list exists (should never be None due to model validation)
-        violations_list = driver.violations if driver.violations is not None else []
-        
-        # Calculate current points from all violations
+        violations_list = driver.violations or []
+
         for violation in violations_list:
-            current_points = self._calculate_current_violation_points(
+            additional_points += self._calculate_current_violation_points(
                 violation, assessment_date
             )
-            additional_points += current_points
-            
-        # Safety record level is just the violation points (0 for clean driver)
-        final_level = int(additional_points)
-        
-        # Cap at maximum level 30
-        return min(final_level, 30)
+
+        return min(int(additional_points), 30)
+
     
     def _calculate_current_violation_points(self, violation: Violation, assessment_date: date) -> float:
         """
@@ -75,31 +85,27 @@ class SafetyRecordService:
             Current points after decay (0 if fully decayed)
         """
         # Get violation parameters from the scoring table
-        violation_row = self.violation_scores[
-            self.violation_scores['violation_type'] == violation.type
-        ]
-        
-        if violation_row.empty:
-            # Unknown violation type, return 0 points
+        rule = VIOLATION_SCORES.get(violation.type)
+        if rule is None:
+            # Unknown violation type
             return 0.0
-            
-        row = violation_row.iloc[0]
-        initial_points = int(row['points_added'])
-        decay_period_years = int(row['decay_period'])
-        decay_amount_per_year = float(row['decay_amounts'])
-        
+
+        initial_points = rule["points_added"]
+        decay_period_years = rule["decay_period"]
+        decay_amount_per_year = rule["decay_amount"]
+
         # Calculate years since violation
         years_since = (assessment_date - violation.date).days / 365.25
         full_years_since = floor(years_since)
-        
-        # If past decay period, violation is completely removed
+
+        # Fully decayed
         if full_years_since >= decay_period_years:
             return 0.0
-            
-        # Calculate current points after decay
+
+        # Apply decay
         points_decayed = full_years_since * decay_amount_per_year
         current_points = max(0.0, initial_points - points_decayed)
-        
+
         return current_points
     
     def get_violation_details(self, driver: Driver, assessment_date: date = None) -> Dict:
