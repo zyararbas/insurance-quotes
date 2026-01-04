@@ -165,8 +165,8 @@ class DriverFactorLookupService:
 
     def get_years_licensed_factor(self, coverage: str, driver: Driver) -> float:
         """Gets the years licensed adjustment factor."""
-        if self.years_licensed_factors is None:
-            self.initialize()
+        # if self.years_licensed_factors is None:
+        #     self.initialize()
             
         assigned_driver_str = 'Yes' if driver.assigned_driver else 'No'
         
