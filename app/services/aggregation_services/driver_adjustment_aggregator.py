@@ -54,12 +54,14 @@ class DriverAdjustmentAggregator:
                 years_licensed_factor = self.driver_lookup_service.get_years_licensed_factor(coverage, driver) 
                 driver_factor_breakdown['years_licensed_factor'] = years_licensed_factor
 
-                # main here
+               
                 
                 # 3. Percentage use by driver factor
                 percentage_use_factor = self.driver_lookup_service.get_percentage_use_factor(coverage, driver)
                 driver_factor_breakdown['percentage_use_factor'] = percentage_use_factor
                 
+                # main here
+
                 # 4. Driving safety record factor (always calculate from violations)
                 # Safety record level is always calculated from violations, never from provided value
                 calculated_safety_level = self.safety_record_service.calculate_safety_record_level(driver)

@@ -84,6 +84,40 @@ PERCENTAGE_USE_FACTORS = {
     },
 }
 
+SAFETY_RECORD_FACTORS = {
+    0:  {"BIPD": 0.506, "COLL": 0.53,  "COMP": 0.641, "MPC": 0.573, "UM": 0.623},
+    1:  {"BIPD": 0.65,  "COLL": 0.633, "COMP": 0.664, "MPC": 0.686, "UM": 0.678},
+    2:  {"BIPD": 0.667, "COLL": 0.672, "COMP": 0.684, "MPC": 0.714, "UM": 0.737},
+    3:  {"BIPD": 0.73,  "COLL": 0.733, "COMP": 0.775, "MPC": 0.774, "UM": 0.783},
+    4:  {"BIPD": 0.769, "COLL": 0.777, "COMP": 0.788, "MPC": 0.809, "UM": 0.837},
+    5:  {"BIPD": 0.803, "COLL": 0.822, "COMP": 0.795, "MPC": 0.818, "UM": 0.845},
+    6:  {"BIPD": 0.843, "COLL": 0.84,  "COMP": 0.802, "MPC": 0.876, "UM": 0.868},
+    7:  {"BIPD": 0.904, "COLL": 0.897, "COMP": 0.906, "MPC": 0.906, "UM": 0.909},
+    8:  {"BIPD": 1.0,   "COLL": 1.0,   "COMP": 1.0,   "MPC": 1.0,   "UM": 1.0},
+    9:  {"BIPD": 1.019, "COLL": 1.012, "COMP": 1.1,   "MPC": 1.169, "UM": 1.267},
+    10: {"BIPD": 1.124, "COLL": 1.044, "COMP": 1.233, "MPC": 1.223, "UM": 1.278},
+    11: {"BIPD": 1.152, "COLL": 1.156, "COMP": 1.367, "MPC": 1.266, "UM": 1.363},
+    12: {"BIPD": 1.267, "COLL": 1.269, "COMP": 1.5,   "MPC": 1.38,  "UM": 1.486},
+    13: {"BIPD": 1.427, "COLL": 1.39,  "COMP": 1.733, "MPC": 1.617, "UM": 1.688},
+    14: {"BIPD": 1.461, "COLL": 1.439, "COMP": 1.867, "MPC": 1.754, "UM": 1.852},
+    15: {"BIPD": 1.588, "COLL": 1.646, "COMP": 2.033, "MPC": 1.906, "UM": 2.064},
+    16: {"BIPD": 1.662, "COLL": 1.746, "COMP": 2.2,   "MPC": 2.064, "UM": 2.164},
+    17: {"BIPD": 1.866, "COLL": 1.861, "COMP": 2.367, "MPC": 2.273, "UM": 2.362},
+    18: {"BIPD": 2.135, "COLL": 2.125, "COMP": 2.49,  "MPC": 2.364, "UM": 2.541},
+    19: {"BIPD": 2.233, "COLL": 2.156, "COMP": 2.596, "MPC": 2.51,  "UM": 2.602},
+    20: {"BIPD": 2.247, "COLL": 2.282, "COMP": 2.881, "MPC": 2.638, "UM": 2.838},
+    21: {"BIPD": 2.4,   "COLL": 2.432, "COMP": 3.061, "MPC": 2.822, "UM": 3.026},
+    22: {"BIPD": 2.444, "COLL": 2.625, "COMP": 3.083, "MPC": 2.877, "UM": 3.121},
+    23: {"BIPD": 2.628, "COLL": 2.702, "COMP": 3.266, "MPC": 3.152, "UM": 3.515},
+    24: {"BIPD": 2.785, "COLL": 2.83,  "COMP": 3.418, "MPC": 3.494, "UM": 3.64},
+    25: {"BIPD": 2.854, "COLL": 3.072, "COMP": 3.767, "MPC": 3.533, "UM": 3.724},
+    26: {"BIPD": 2.997, "COLL": 3.209, "COMP": 3.998, "MPC": 3.64,  "UM": 3.855},
+    27: {"BIPD": 3.025, "COLL": 3.248, "COMP": 4.0,   "MPC": 3.562, "UM": 4.074},
+    28: {"BIPD": 3.09,  "COLL": 3.425, "COMP": 4.127, "MPC": 3.892, "UM": 4.146},
+    29: {"BIPD": 3.146, "COLL": 3.449, "COMP": 4.162, "MPC": 4.367, "UM": 4.23},
+    30: {"BIPD": 3.458, "COLL": 3.712, "COMP": 4.899, "MPC": 4.38,  "UM": 4.687},
+}
+
 
 
 
@@ -410,22 +444,22 @@ class DriverFactorLookupService:
 
     def get_safety_record_factor(self, coverage: str, safety_level: int) -> float:
         """Gets the driving safety record factor based on safety record level."""
-        if self.driving_safety_record_factors is None:
-            self.initialize()
+        # if self.driving_safety_record_factors is None:
+        #     self.initialize()
             
         try:
-            # Map coverage names to column names in the safety record table
-            column_mapping = {
-                'BIPD': 'bipd_factor',
-                'COLL': 'coll_factor', 
-                'COMP': 'comp_factor',
-                'MPC': 'mpc_factor',
-                'UM': 'um_factor',
-                'U': 'um_factor'  # Handle legacy 'U' mapping
-            }
+            # # Map coverage names to column names in the safety record table
+            # column_mapping = {
+            #     'BIPD': 'bipd_factor',
+            #     'COLL': 'coll_factor', 
+            #     'COMP': 'comp_factor',
+            #     'MPC': 'mpc_factor',
+            #     'UM': 'um_factor',
+            #     'U': 'um_factor'  # Handle legacy 'U' mapping
+            # }
             
-            column_name = column_mapping.get(coverage, coverage.lower() + '_factor')
-            factor = self.driving_safety_record_factors.loc[safety_level, column_name]
+            # column_name = column_mapping.get(coverage, coverage.lower() + '_factor')
+            factor = SAFETY_RECORD_FACTORS.get(safety_level, {}).get(coverage)
             logger.info(f"Safety record factor for {coverage} at level {safety_level}: {factor}")
             return float(factor)
         except (KeyError, IndexError):
