@@ -60,6 +60,31 @@ YEARS_LICENSED_FACTORS = {
     },
 }
 
+PERCENTAGE_USE_FACTORS = {
+    "No, No": {
+        "BIPD": 1.0,
+        "COLL": 1.0,
+        "COMP": 1.0,
+        "MPC": 1.0,
+        "U": 1.0,
+    },
+    "Yes, No": {
+        "BIPD": 0.817,
+        "COLL": 0.816,
+        "COMP": 0.753,
+        "MPC": 0.792,
+        "U": 0.871,
+    },
+    "All Not Specifically Listed, Yes": {
+        "BIPD": 0.718,
+        "COLL": 0.749,
+        "COMP": 0.714,
+        "MPC": 0.713,
+        "U": 0.851,
+    },
+}
+
+
 
 
 class DriverFactorLookupService:
@@ -88,7 +113,7 @@ class DriverFactorLookupService:
         """Loads all driver factor data tables."""
         # DEPRECATED self.base_driver_factors = self.data_loader.load_base_driver_factors()
         # DEPRECATED self.years_licensed_factors = self.data_loader.load_years_licensed_key()
-        self.percentage_use_factors = self.data_loader.load_percentage_use_by_driver()
+        # DEPRECATED self.percentage_use_factors = self.data_loader.load_percentage_use_by_driver()
         self.driving_safety_record_factors = self.data_loader.load_driving_safety_record_rating_plan()
         self.single_auto_factors = self.data_loader.load_single_auto_factors()
         self.annual_mileage_factors = self.data_loader.load_annual_mileage_factors()
@@ -308,8 +333,8 @@ class DriverFactorLookupService:
 
     def get_percentage_use_factor(self, coverage: str, driver: Driver) -> float:
         """Gets the percentage use by driver factor."""
-        if self.percentage_use_factors is None:
-            self.initialize()
+        # if self.percentage_use_factors is None:
+        #     self.initialize()
             
         # Determine the key based on driver percentage use and assignment
         if driver.assigned_driver:
@@ -321,7 +346,11 @@ class DriverFactorLookupService:
             key = 'All Not Specifically Listed, Yes'  # Not assigned driver
         
         try:
-            factor = self.percentage_use_factors.loc[key, coverage]
+            factor = (
+                PERCENTAGE_USE_FACTORS
+                .get(key, {})
+                .get(coverage)
+            )
             logger.info(f"Percentage use factor for {coverage}: {factor}")
             return float(factor)
         except (KeyError, IndexError):
