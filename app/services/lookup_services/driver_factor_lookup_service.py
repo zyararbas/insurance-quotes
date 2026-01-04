@@ -11,6 +11,57 @@ BASE_DRIVER_FACTOR_COLLECTION="base-driver-factors"
 
 logger = logging.getLogger(__name__)
 
+# years licensed ranges are in MONTHS (0–83)
+YEARS_LICENSED_FACTORS = {
+    "BIPD": {
+        True: [
+            ((0, 48), 1.0),
+            ((49, 83), 0.873),
+        ],
+        False: [
+            (None, 0.873),  # All Not Listed
+        ],
+    },
+    "COLL": {
+        True: [
+            ((0, 48), 1.0),
+            ((49, 83), 0.943),
+        ],
+        False: [
+            (None, 0.943),
+        ],
+    },
+    "COMP": {
+        True: [
+            ((0, 48), 1.0),
+            ((49, 83), 0.95),
+        ],
+        False: [
+            (None, 0.95),
+        ],
+    },
+    "MPC": {
+        True: [
+            ((0, 48), 1.0),
+            ((49, 83), 0.769),
+        ],
+        False: [
+            (None, 0.769),
+        ],
+    },
+    "U": {
+        True: [
+            ((0, 48), 1.0),
+            ((49, 83), 0.788),
+        ],
+        False: [
+            (None, 0.788),
+        ],
+    },
+}
+
+
+
 class DriverFactorLookupService:
     """
     Microservice for driver factor lookups.
@@ -36,7 +87,7 @@ class DriverFactorLookupService:
     def initialize(self):
         """Loads all driver factor data tables."""
         # DEPRECATED self.base_driver_factors = self.data_loader.load_base_driver_factors()
-        self.years_licensed_factors = self.data_loader.load_years_licensed_key()
+        # DEPRECATED self.years_licensed_factors = self.data_loader.load_years_licensed_key()
         self.percentage_use_factors = self.data_loader.load_percentage_use_by_driver()
         self.driving_safety_record_factors = self.data_loader.load_driving_safety_record_rating_plan()
         self.single_auto_factors = self.data_loader.load_single_auto_factors()
@@ -165,8 +216,8 @@ class DriverFactorLookupService:
 
     def get_years_licensed_factor(self, coverage: str, driver: Driver) -> float:
         """Gets the years licensed adjustment factor."""
-        if self.years_licensed_factors is None:
-            self.initialize()
+        # if self.years_licensed_factors is None:
+        #     self.initialize()
             
         assigned_driver_str = 'Yes' if driver.assigned_driver else 'No'
         
@@ -174,30 +225,33 @@ class DriverFactorLookupService:
         coverage_key = coverage
         if coverage == 'UM':
             coverage_key = 'U'
-        
-        # Find matching row in years licensed factors table
-        match = self.years_licensed_factors[
-            (self.years_licensed_factors['Coverage'] == coverage_key) &
-            (self.years_licensed_factors['Assigned Driver'] == assigned_driver_str)
-        ]
-        
-        if not match.empty:
-            # Determine which range the driver's years licensed falls into
-            years_licensed = driver.years_licensed
-            for _, row in match.iterrows():
-                years_range = row['Years Licensed']
-                if '–' in years_range:
-                    min_years, max_years = map(int, years_range.split(' – '))
-                    if min_years <= years_licensed <= max_years:
-                        factor = float(row['Factor'])
-                        logger.info(f"Years licensed factor for {coverage}: {factor}")
-                        return factor
-                elif 'All Not Listed' in years_range:
-                    factor = float(row['Factor'])
-                    logger.info(f"Years licensed factor for {coverage}: {factor}")
-                    return factor
-        
-        logger.warning(f"No years licensed factor found for {coverage}, using default 1.0")
+        assigned = bool(driver.assigned_driver)
+        years_licensed = driver.years_licensed
+
+        coverage_table = YEARS_LICENSED_FACTORS.get(coverage_key)
+        if not coverage_table:
+            logger.warning(f"No years licensed table for coverage {coverage_key}")
+            return 1.0
+
+        rules = coverage_table.get(assigned)
+        if not rules:
+            logger.warning(
+                f"No years licensed rules for coverage={coverage_key}, assigned={assigned}"
+            )
+            return 1.0
+
+        for year_range, factor in rules:
+            if year_range is None:
+                # "All Not Listed"
+                logger.info(f"Years licensed factor for {coverage}: {factor}")
+                return factor
+
+            min_years, max_years = year_range
+            if min_years <= years_licensed <= max_years:
+                logger.info(f"Years licensed factor for {coverage}: {factor}")
+                return factor
+
+        logger.warning(f"No years licensed factor matched for {coverage}, using default 1.0")
         return 1.0
 
     def get_all_years_licensed_factors(self, years_licensed: int, assigned_driver: str) -> dict:
