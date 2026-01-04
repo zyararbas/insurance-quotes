@@ -36,7 +36,7 @@ class DriverFactorLookupService:
     def initialize(self):
         """Loads all driver factor data tables."""
         # DEPRECATED self.base_driver_factors = self.data_loader.load_base_driver_factors()
-        self.years_licensed_factors = self.data_loader.load_years_licensed_key()
+        # DEPRECATED self.years_licensed_factors = self.data_loader.load_years_licensed_key()
         self.percentage_use_factors = self.data_loader.load_percentage_use_by_driver()
         self.driving_safety_record_factors = self.data_loader.load_driving_safety_record_rating_plan()
         self.single_auto_factors = self.data_loader.load_single_auto_factors()
