@@ -176,26 +176,25 @@ class DriverFactorLookupService:
             coverage_key = 'U'
         
         # Find matching row in years licensed factors table
-        match = self.years_licensed_factors[
-            (self.years_licensed_factors['Coverage'] == coverage_key) &
-            (self.years_licensed_factors['Assigned Driver'] == assigned_driver_str)
-        ]
+        match_query = {"Coverage": coverage_key, "Assigned Driver": assigned_driver_str}
+        match_result = self.data_loader.storage_service.find(match_query,BASE_DRIVER_FACTOR_COLLECTION)
+        match = match_result[0] if match_result else None    
         
-        if not match.empty:
+        if match:
             # Determine which range the driver's years licensed falls into
             years_licensed = driver.years_licensed
-            for _, row in match.iterrows():
-                years_range = row['Years Licensed']
-                if '–' in years_range:
-                    min_years, max_years = map(int, years_range.split(' – '))
-                    if min_years <= years_licensed <= max_years:
-                        factor = float(row['Factor'])
-                        logger.info(f"Years licensed factor for {coverage}: {factor}")
-                        return factor
-                elif 'All Not Listed' in years_range:
-                    factor = float(row['Factor'])
+            
+            years_range = match['Years Driving']
+            if '–' in years_range:
+                min_years, max_years = map(int, years_range.split(' – '))
+                if min_years <= years_licensed <= max_years:
+                    factor = float(match['Factor'])
                     logger.info(f"Years licensed factor for {coverage}: {factor}")
                     return factor
+            elif 'All Not Listed' in years_range:
+                factor = float(match['Factor'])
+                logger.info(f"Years licensed factor for {coverage}: {factor}")
+                return factor
         
         logger.warning(f"No years licensed factor found for {coverage}, using default 1.0")
         return 1.0
