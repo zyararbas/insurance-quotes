@@ -43,7 +43,7 @@ class SafetyRecordService:
         
     def initialize(self):
         """Loads the violation scoring table into memory."""
-        self.violation_scores = self.data_loader.load_safety_driver_record_score()
+        # self.violation_scores = self.data_loader.load_safety_driver_record_score()
         
     def calculate_safety_record_level(self, driver: Driver, assessment_date: date = None) -> int:
         """

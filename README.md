@@ -39,7 +39,7 @@ docker build -t insurance-quotes .
 
 aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin  889572107296.dkr.ecr.us-west-1.amazonaws.com
 
-docker buildx build --platform linux/amd64 -t insurance-quotes .
+docker buildx build --no-cache --platform linux/amd64 -t insurance-quotes .
 docker tag insurance-quotes:latest 889572107296.dkr.ecr.us-west-1.amazonaws.com/insurance-quotes-app:latest
 docker push 889572107296.dkr.ecr.us-west-1.amazonaws.com/insurance-quotes-app:latest
 
