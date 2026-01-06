@@ -118,6 +118,46 @@ SAFETY_RECORD_FACTORS = {
     30: {"BIPD": 3.458, "COLL": 3.712, "COMP": 4.899, "MPC": 4.38,  "UM": 4.687},
 }
 
+SINGLE_AUTO_FACTOR_LOOKUP = {
+    'BIPD': 1.259,
+    'COLL': 1.255,
+    'COMP': 1.081,
+    'MPC': 1.263,
+    'U': 1.319,
+}
+
+ANNUAL_MILEAGE_FACTOR_LOOKUP = {
+    0:     {'BIPD': 0.617, 'COLL': 0.581, 'COMP': 0.652, 'MPC': 0.645, 'U': 0.667},
+    1450:  {'BIPD': 0.675, 'COLL': 0.697, 'COMP': 0.662, 'MPC': 0.674, 'U': 0.691},
+    2450:  {'BIPD': 0.743, 'COLL': 0.742, 'COMP': 0.700, 'MPC': 0.709, 'U': 0.733},
+    3450:  {'BIPD': 0.757, 'COLL': 0.780, 'COMP': 0.748, 'MPC': 0.723, 'U': 0.775},
+    4450:  {'BIPD': 0.816, 'COLL': 0.803, 'COMP': 0.767, 'MPC': 0.779, 'U': 0.795},
+    5450:  {'BIPD': 0.859, 'COLL': 0.852, 'COMP': 0.815, 'MPC': 0.783, 'U': 0.815},
+    6450:  {'BIPD': 0.898, 'COLL': 0.910, 'COMP': 0.853, 'MPC': 0.830, 'U': 0.892},
+    7450:  {'BIPD': 0.941, 'COLL': 0.951, 'COMP': 0.890, 'MPC': 0.913, 'U': 0.920},
+    8450:  {'BIPD': 0.957, 'COLL': 0.969, 'COMP': 0.920, 'MPC': 0.982, 'U': 0.989},
+    9450:  {'BIPD': 0.976, 'COLL': 0.996, 'COMP': 0.940, 'MPC': 0.989, 'U': 0.996},
+    10450: {'BIPD': 1.000, 'COLL': 1.000, 'COMP': 1.000, 'MPC': 1.000, 'U': 1.000},
+    11450: {'BIPD': 1.002, 'COLL': 1.002, 'COMP': 1.007, 'MPC': 1.014, 'U': 1.011},
+    12450: {'BIPD': 1.006, 'COLL': 1.004, 'COMP': 1.034, 'MPC': 1.021, 'U': 1.026},
+    13450: {'BIPD': 1.009, 'COLL': 1.010, 'COMP': 1.045, 'MPC': 1.028, 'U': 1.049},
+    14450: {'BIPD': 1.028, 'COLL': 1.021, 'COMP': 1.069, 'MPC': 1.035, 'U': 1.062},
+    15450: {'BIPD': 1.047, 'COLL': 1.029, 'COMP': 1.074, 'MPC': 1.043, 'U': 1.070},
+    16450: {'BIPD': 1.069, 'COLL': 1.054, 'COMP': 1.091, 'MPC': 1.050, 'U': 1.077},
+    17450: {'BIPD': 1.112, 'COLL': 1.058, 'COMP': 1.099, 'MPC': 1.057, 'U': 1.087},
+    18450: {'BIPD': 1.122, 'COLL': 1.077, 'COMP': 1.155, 'MPC': 1.071, 'U': 1.096},
+    19450: {'BIPD': 1.155, 'COLL': 1.104, 'COMP': 1.199, 'MPC': 1.092, 'U': 1.099},
+    20450: {'BIPD': 1.168, 'COLL': 1.114, 'COMP': 1.208, 'MPC': 1.106, 'U': 1.103},
+    21450: {'BIPD': 1.178, 'COLL': 1.124, 'COMP': 1.218, 'MPC': 1.121, 'U': 1.151},
+    23950: {'BIPD': 1.187, 'COLL': 1.160, 'COMP': 1.285, 'MPC': 1.135, 'U': 1.166},
+    26450: {'BIPD': 1.194, 'COLL': 1.206, 'COMP': 1.323, 'MPC': 1.149, 'U': 1.180},
+    28950: {'BIPD': 1.215, 'COLL': 1.234, 'COMP': 1.333, 'MPC': 1.156, 'U': 1.195},
+    31450: {'BIPD': 1.263, 'COLL': 1.271, 'COMP': 1.342, 'MPC': 1.160, 'U': 1.210},
+    33950: {'BIPD': 1.355, 'COLL': 1.322, 'COMP': 1.362, 'MPC': 1.184, 'U': 1.224},
+}
+
+
+
 
 
 
@@ -149,8 +189,8 @@ class DriverFactorLookupService:
         # DEPRECATED self.years_licensed_factors = self.data_loader.load_years_licensed_key()
         # DEPRECATED self.percentage_use_factors = self.data_loader.load_percentage_use_by_driver()
         # DEPRECATED self.driving_safety_record_factors = self.data_loader.load_driving_safety_record_rating_plan()
-        self.single_auto_factors = self.data_loader.load_single_auto_factors()
-        self.annual_mileage_factors = self.data_loader.load_annual_mileage_factors()
+        # DEPRECATED self.single_auto_factors = self.data_loader.load_single_auto_factors()
+        # DEPRECATED (?) self.annual_mileage_factors = self.data_loader.load_annual_mileage_factors()
         self.usage_type_factors = self.data_loader.load_usage_type_factors()
         
         logger.info("DriverFactorLookupService initialized")
@@ -501,8 +541,8 @@ class DriverFactorLookupService:
 
     def get_single_automobile_factor(self, coverage: str, usage: Usage) -> float:
         """Gets the single automobile factor."""
-        if self.single_auto_factors is None:
-            self.initialize()
+        # if self.single_auto_factors is None:
+        #     self.initialize()
             
         if not usage.single_automobile:
             return 1.0
@@ -519,8 +559,12 @@ class DriverFactorLookupService:
             
             # Get the correct coverage value for lookup
             coverage_value = coverage_mapping.get(coverage, coverage)
-            
-            factor = self.single_auto_factors.loc[self.single_auto_factors['coverage'] == coverage_value, 'single_automobile_factor'].iloc[0]
+            factor = SINGLE_AUTO_FACTOR_LOOKUP.get(coverage_value)
+
+            # DEPRECATED factor = self.single_auto_factors.loc[self.single_auto_factors['coverage'] == coverage_value, 'single_automobile_factor'].iloc[0]
+            if factor is None:
+                raise ValueError(f"No single auto factor found for coverage '{coverage_value}'")
+
             logger.info(f"Single auto factor for {coverage} (mapped to {coverage_value}): {factor}")
             return float(factor)
         except (KeyError, IndexError):
@@ -569,8 +613,8 @@ class DriverFactorLookupService:
 
     def get_annual_mileage_factor(self, coverage: str, usage: Usage) -> float:
         """Gets the annual mileage factor."""
-        if self.annual_mileage_factors is None:
-            self.initialize()
+        # if self.annual_mileage_factors is None:
+        #     self.initialize()
             
         try:
             annual_mileage = usage.annual_mileage
@@ -586,37 +630,74 @@ class DriverFactorLookupService:
             
             # Get the correct column name for this coverage
             column_name = coverage_column_map.get(coverage, coverage)
-            
-            # Find the appropriate mileage band
-            for _, row in self.annual_mileage_factors.iterrows():
-                lower_bound = row['lower_bound']
-                
-                # Handle the special case for the last row (33950+)
-                if 'Annual Mileage' in row and '+' in str(row['Annual Mileage']):
-                    # This is the highest mileage band
+            lower_bounds = sorted(ANNUAL_MILEAGE_FACTOR_LOOKUP.keys())
+
+            for i, lower_bound in enumerate(lower_bounds):
+                # Last band: open-ended (33950+)
+                if i == len(lower_bounds) - 1:
                     if annual_mileage >= lower_bound:
-                        factor = float(row[column_name])
-                        logger.info(f"Annual mileage factor for {coverage} (column {column_name}): {factor}")
-                        return factor
-                else:
-                    # For other rows, find the next row's lower bound to determine upper bound
-                    next_row_idx = self.annual_mileage_factors.index.get_loc(row.name) + 1
-                    if next_row_idx < len(self.annual_mileage_factors):
-                        next_row = self.annual_mileage_factors.iloc[next_row_idx]
-                        upper_bound = next_row['lower_bound']
-                        if lower_bound <= annual_mileage < upper_bound:
-                            factor = float(row[column_name])
-                            logger.info(f"Annual mileage factor for {coverage} (column {column_name}): {factor}")
-                            return factor
-                    else:
-                        # Last row (shouldn't happen with current logic)
-                        if annual_mileage >= lower_bound:
-                            factor = float(row[column_name])
-                            logger.info(f"Annual mileage factor for {coverage} (column {column_name}): {factor}")
-                            return factor
-            
-            logger.warning(f"No annual mileage factor found for {coverage}, using default 1.0")
+                        try:
+                            factor = ANNUAL_MILEAGE_FACTOR_LOOKUP[lower_bound][column_name]
+                        except KeyError:
+                            raise ValueError(
+                                f"No annual mileage factor for lower_bound={lower_bound}, coverage={column_name}"
+                            )
+
+                        logger.info(
+                            f"Annual mileage factor for {coverage} (lower_bound {lower_bound}+): {factor}"
+                        )
+                        return float(factor)
+
+                # Normal band
+                next_lower_bound = lower_bounds[i + 1]
+                if lower_bound <= annual_mileage < next_lower_bound:
+                    try:
+                        factor = ANNUAL_MILEAGE_FACTOR_LOOKUP[lower_bound][column_name]
+                    except KeyError:
+                        raise ValueError(
+                            f"No annual mileage factor for lower_bound={lower_bound}, coverage={column_name}"
+                        )
+
+                    logger.info(
+                        f"Annual mileage factor for {coverage} "
+                        f"(range {lower_bound}–{next_lower_bound - 1}): {factor}"
+                    )
+                    return float(factor)
+
+            # Should never happen if data is correct
+            raise ValueError(f"No annual mileage band found for annual_mileage={annual_mileage}")
             return 1.0
+            # DEPRECATED
+            # # Find the appropriate mileage band
+            # for _, row in self.annual_mileage_factors.iterrows():
+            #     lower_bound = row['lower_bound']
+                
+            #     # Handle the special case for the last row (33950+)
+            #     if 'Annual Mileage' in row and '+' in str(row['Annual Mileage']):
+            #         # This is the highest mileage band
+            #         if annual_mileage >= lower_bound:
+            #             factor = float(row[column_name])
+            #             logger.info(f"Annual mileage factor for {coverage} (column {column_name}): {factor}")
+            #             return factor
+            #     else:
+            #         # For other rows, find the next row's lower bound to determine upper bound
+            #         next_row_idx = self.annual_mileage_factors.index.get_loc(row.name) + 1
+            #         if next_row_idx < len(self.annual_mileage_factors):
+            #             next_row = self.annual_mileage_factors.iloc[next_row_idx]
+            #             upper_bound = next_row['lower_bound']
+            #             if lower_bound <= annual_mileage < upper_bound:
+            #                 factor = float(row[column_name])
+            #                 logger.info(f"Annual mileage factor for {coverage} (column {column_name}): {factor}")
+            #                 return factor
+            #         else:
+            #             # Last row (shouldn't happen with current logic)
+            #             if annual_mileage >= lower_bound:
+            #                 factor = float(row[column_name])
+            #                 logger.info(f"Annual mileage factor for {coverage} (column {column_name}): {factor}")
+            #                 return factor
+            
+            # logger.warning(f"No annual mileage factor found for {coverage}, using default 1.0")
+            # return 1.0
             
         except Exception as e:
             logger.error(f"Error getting annual mileage factor for {coverage}: {e}")
