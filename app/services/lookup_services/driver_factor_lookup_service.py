@@ -118,6 +118,17 @@ SAFETY_RECORD_FACTORS = {
     30: {"BIPD": 3.458, "COLL": 3.712, "COMP": 4.899, "MPC": 4.38,  "UM": 4.687},
 }
 
+SINGLE_AUTO_FACTOR_LOOKUP = {
+    'BIPD': 1.259,
+    'COLL': 1.255,
+    'COMP': 1.081,
+    'MPC': 1.263,
+    'U': 1.319,
+}
+
+
+
+
 
 
 
@@ -149,7 +160,7 @@ class DriverFactorLookupService:
         # DEPRECATED self.years_licensed_factors = self.data_loader.load_years_licensed_key()
         # DEPRECATED self.percentage_use_factors = self.data_loader.load_percentage_use_by_driver()
         # DEPRECATED self.driving_safety_record_factors = self.data_loader.load_driving_safety_record_rating_plan()
-        self.single_auto_factors = self.data_loader.load_single_auto_factors()
+        # DEPRECATED self.single_auto_factors = self.data_loader.load_single_auto_factors()
         self.annual_mileage_factors = self.data_loader.load_annual_mileage_factors()
         self.usage_type_factors = self.data_loader.load_usage_type_factors()
         
@@ -501,8 +512,8 @@ class DriverFactorLookupService:
 
     def get_single_automobile_factor(self, coverage: str, usage: Usage) -> float:
         """Gets the single automobile factor."""
-        if self.single_auto_factors is None:
-            self.initialize()
+        # if self.single_auto_factors is None:
+        #     self.initialize()
             
         if not usage.single_automobile:
             return 1.0
@@ -519,8 +530,12 @@ class DriverFactorLookupService:
             
             # Get the correct coverage value for lookup
             coverage_value = coverage_mapping.get(coverage, coverage)
-            
-            factor = self.single_auto_factors.loc[self.single_auto_factors['coverage'] == coverage_value, 'single_automobile_factor'].iloc[0]
+            factor = SINGLE_AUTO_FACTOR_LOOKUP.get(coverage_value)
+
+            # DEPRECATED factor = self.single_auto_factors.loc[self.single_auto_factors['coverage'] == coverage_value, 'single_automobile_factor'].iloc[0]
+            if factor is None:
+                raise ValueError(f"No single auto factor found for coverage '{coverage_value}'")
+
             logger.info(f"Single auto factor for {coverage} (mapped to {coverage_value}): {factor}")
             return float(factor)
         except (KeyError, IndexError):

@@ -60,7 +60,7 @@ class DriverAdjustmentAggregator:
                 percentage_use_factor = self.driver_lookup_service.get_percentage_use_factor(coverage, driver)
                 driver_factor_breakdown['percentage_use_factor'] = percentage_use_factor
                 
-                # main here
+               
 
                 # 4. Driving safety record factor (always calculate from violations)
                 # Safety record level is always calculated from violations, never from provided value
@@ -70,10 +70,15 @@ class DriverAdjustmentAggregator:
                 
                 driver_factor_breakdown['safety_record_factor'] = safety_record_factor
                 
+
+                # main here
+
                 # 5. Single Automobile Factor
                 single_auto_factor = self.driver_lookup_service.get_single_automobile_factor(coverage, usage)
                 driver_factor_breakdown['single_auto_factor'] = single_auto_factor
 
+
+    
                 # 6. Annual Mileage Factor (part of driver adjustment factor)
                 annual_mileage_factor = self.driver_lookup_service.get_annual_mileage_factor(coverage, usage)
                 driver_factor_breakdown['annual_mileage_factor'] = annual_mileage_factor
