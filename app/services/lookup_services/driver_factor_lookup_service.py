@@ -66,21 +66,21 @@ PERCENTAGE_USE_FACTORS = {
         "COLL": 1.0,
         "COMP": 1.0,
         "MPC": 1.0,
-        "U": 1.0,
+        "UM": 1.0,
     },
     "Yes, No": {
         "BIPD": 0.817,
         "COLL": 0.816,
         "COMP": 0.753,
         "MPC": 0.792,
-        "U": 0.871,
+        "UM": 0.871,
     },
     "All Not Specifically Listed, Yes": {
         "BIPD": 0.718,
         "COLL": 0.749,
         "COMP": 0.714,
         "MPC": 0.713,
-        "U": 0.851,
+        "UM": 0.851,
     },
 }
 

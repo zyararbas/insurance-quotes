@@ -157,8 +157,9 @@ class AdapterService:
             state_info=policy_info.get("address", {}).get("addressRegion")
             discounts_info = self._extract_discounts(payload)
             zip_code_full = policy_info.get("address", {}).get("postalCode", "")
-            additional_vehicles_info = policy_data.get("vehicles", [])
-            coverage_info = self._extract_coverages(payload)
+            additional_vehicles_info = policy_data.get("vehicles", []) 
+            coverages_choise = payload.get("additional_info", {}).get("general_questions", {}).get("coverageLevel", "min")
+            coverage_info = COVERAGES.get(coverages_choise.lower(), {})
         else: 
             zip_code_full = payload.get("additional_info", {}).get("general_questions", {}).get("zip_code", "")
             coverages_choise = payload.get("additional_info", {}).get("general_questions", {}).get("coverageLevel", "min")

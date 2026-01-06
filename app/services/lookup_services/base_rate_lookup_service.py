@@ -31,7 +31,7 @@ class BaseRateLookupService:
         """Loads base rate and territory factor data."""
         #self.base_rates = self.data_loader.load_base_rates()
         # self.zip_territory_factors = self.data_loader.load_zip_territory_factors()
-        logger.info("BaseRateLookupService initialized")
+        # logger.info("BaseRateLookupService initialized")
         
     def get_territory_factor_for_coverage(self, zip_factors: Dict, coverage: str) -> float:
             # Get the specific factor for this coverage type

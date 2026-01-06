@@ -71,9 +71,15 @@ CARRIER_CONFIG = {
     }
 }
 
+CARRIER_CONFIG_STATEFARM_CA = {
+            "carrier": "STATEFARM",
+            "state": "CA",
+            # ... other config ...
+         }
+
 vehicleLookupService = VehicleLookupService() 
 adapter_service = AdapterService()
-
+pricing_orchestrator = PricingOrchestrator(CARRIER_CONFIG_STATEFARM_CA)
 
 @router.post("/vehicle-spec-orchestrator/")
 def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
@@ -128,10 +134,9 @@ async def create_quote(payload: Dict[str, Any]):
         logging.info(f"Paylod  |{payload}|")
         rating_inputs = adapter_service.create_rating_inputs_from_payload(payload)
         logging.info(f" Rating inputs |{rating_inputs}|")
-       
         results = []
         for rating_input in rating_inputs:
-            result = _calculate_single_rating(rating_input)
+            result = pricing_orchestrator.calculate_premium(rating_input)
             if result:
                 results.append(result)
         
@@ -142,27 +147,3 @@ async def create_quote(payload: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"An internal error occurred during transformation: {e}")
 
 
-def _calculate_single_rating(rating_input: RatingInput) -> Optional[Dict[str, Any]]:
-    """
-    Helper function to calculate premium for a single rating input.
-    Returns the result dict or None if an error occurs (logged).
-    """
-    try:
-        carrier_config = {
-            "carrier": "STATEFARM",
-            "state": "CA",
-            # ... other config ...
-         }
-
-        if not carrier_config:
-            logger.warning(f"Carrier '{rating_input.carrier}' not supported.")
-            return None
-
-        orchestrator = PricingOrchestrator(carrier_config)
-        result = orchestrator.calculate_premium(rating_input)
-        return result
-
-    except Exception as e:
-        logger.error(f"Error calculating premium for carrier {rating_input.carrier}: {e}", exc_info=True)
-        return None
-        

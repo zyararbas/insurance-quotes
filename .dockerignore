@@ -5,3 +5,4 @@ __pycache__
 *.pyc
 .DS_Store
 .env
+vehicle_rates_chroma_db

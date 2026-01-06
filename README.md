@@ -47,6 +47,6 @@ b. ### Launching
 docker run -p 8002:8002 --network coveragecompassnetwork  --env-file .env insurance-quotes
 
 Bashing into 
-docker run -it --name insurance-quotes bash s
+docker run -it --name insurance-quotes bash 
 
 
