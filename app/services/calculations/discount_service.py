@@ -24,6 +24,11 @@ TENURE_FACTOR_LOOKUP = {
     },
 }
 
+FEDERAL_EMPLOYEE_FACTORS = {
+    'Yes': 0.7,
+    'No': 1
+}
+
 
 class DiscountService:
     """Service for calculating various discount factors for the pricing calculation."""
@@ -71,7 +76,7 @@ class DiscountService:
             loyalty_factor = self._calculate_loyalty_discount(discounts.loyalty_years, coverage)
             coverage_discounts['loyalty'] = loyalty_factor
             
-            # testing works 
+            # testing works
 
             # 3. Federal Employee Discount
             federal_employee_factor = self._calculate_federal_employee_discount(
@@ -247,15 +252,21 @@ class DiscountService:
         """Calculate federal employee discount factor."""
         if not federal_employee:
             return 1.0
-            
+
+        FEDERAL_EMPLOYEE_FACTORS = {
+            'Yes': 0.7,
+            'No': 1
+        }
+
         try:
             # Look up federal employee factor - it's the same for all coverages
             # The CSV has 'eligible ' (with trailing space) and 'factor' columns
-            eligible_row = self.federal_employee_factors[self.federal_employee_factors['eligible '] == 'Yes']
-            if not eligible_row.empty:
-                factor = float(eligible_row['factor'].iloc[0])
+
+            factor = FEDERAL_EMPLOYEE_FACTORS.get('Yes')
+            if factor is not None:
                 logger.info(f"Federal employee discount factor: {factor}")
-                return factor
+                return float(factor)
+            
         except (KeyError, IndexError) as e:
             logger.warning(f"Federal employee factor not found: {e}")
             
