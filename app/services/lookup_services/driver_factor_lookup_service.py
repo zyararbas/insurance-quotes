@@ -156,6 +156,38 @@ ANNUAL_MILEAGE_FACTOR_LOOKUP = {
     33950: {'BIPD': 1.355, 'COLL': 1.322, 'COMP': 1.362, 'MPC': 1.184, 'U': 1.224},
 }
 
+USAGE_TYPE_FACTOR_LOOKUP = {
+    'Farm': {
+        'usage_type_code': 3,
+        'factors': {
+            'bipd_factor': 0.865,
+            'coll_factor': 0.848,
+            'comp_factor': 0.860,
+            'mpc_factor': 0.907,
+            'um_factor':  1.056,
+        },
+    },
+    'Pleasure / Work / School': {
+        'usage_type_code': 1,
+        'factors': {
+            'bipd_factor': 1.000,
+            'coll_factor': 1.000,
+            'comp_factor': 1.000,
+            'mpc_factor': 1.000,
+            'um_factor':    1.000,
+        },
+    },
+    'Business': {
+        'usage_type_code': 2,
+        'factors': {
+            'bipd_factor': 1.257,
+            'coll_factor': 0.918,
+            'comp_factor': 0.936,
+            'mpc_factor': 0.917,
+            'um_factor':    0.975,
+        },
+    },
+}
 
 
 
@@ -191,7 +223,7 @@ class DriverFactorLookupService:
         # DEPRECATED self.driving_safety_record_factors = self.data_loader.load_driving_safety_record_rating_plan()
         # DEPRECATED self.single_auto_factors = self.data_loader.load_single_auto_factors()
         # DEPRECATED (?) self.annual_mileage_factors = self.data_loader.load_annual_mileage_factors()
-        self.usage_type_factors = self.data_loader.load_usage_type_factors()
+        # DEPRECATED self.usage_type_factors = self.data_loader.load_usage_type_factors()
         
         logger.info("DriverFactorLookupService initialized")
         
@@ -631,7 +663,7 @@ class DriverFactorLookupService:
             # Get the correct column name for this coverage
             column_name = coverage_column_map.get(coverage, coverage)
             lower_bounds = sorted(ANNUAL_MILEAGE_FACTOR_LOOKUP.keys())
-
+            # improvement :make this O(1) not O(n) is this our first time coding????
             for i, lower_bound in enumerate(lower_bounds):
                 # Last band: open-ended (33950+)
                 if i == len(lower_bounds) - 1:
@@ -744,8 +776,8 @@ class DriverFactorLookupService:
 
     def get_usage_type_factor(self, coverage: str, usage: Usage) -> float:
         """Gets the usage type factor."""
-        if self.usage_type_factors is None:
-            self.initialize()
+        # if self.usage_type_factors is None:
+        #     self.initialize()
             
         try:
             usage_type = usage.type
@@ -761,21 +793,45 @@ class DriverFactorLookupService:
             
             # Get the correct column name for this coverage
             column_name = coverage_column_map.get(coverage, coverage.lower() + '_factor')
+            usage_entry = USAGE_TYPE_FACTOR_LOOKUP.get(usage_type)
             
-            # Since the DataFrame is indexed by automobile_use, we can directly access it
-            if usage_type in self.usage_type_factors.index:
-                row = self.usage_type_factors.loc[usage_type]
-                # Get the factor for this coverage using the mapped column name
-                if column_name in row:
-                    factor = float(row[column_name])
-                    logger.info(f"Usage type factor for {coverage} (column {column_name}): {factor}")
-                    return factor
-                else:
-                    logger.warning(f"Column {column_name} not found for usage type {usage_type}")
-                    return 1.0
+            if usage_entry is None:
+                logger.warning(
+                    f"No usage type factor found for {coverage}, using default 1.0"
+                )
+                return 1.0
             
-            logger.warning(f"No usage type factor found for {coverage}, using default 1.0")
-            return 1.0
+            factor = usage_entry['factors'].get(column_name)
+            
+            if factor is None:
+                logger.warning(
+                    f"Coverage {column_name} not found for usage type {usage_type}"
+                )
+                return 1.0
+            
+            logger.info(
+            f"Usage type factor for {coverage} "
+            f"(usage_type={usage_type}, code={usage_entry['usage_type_code']}): "
+            f"{factor}"
+            )
+            return float(factor)
+
+
+            # DEPRECATED
+            # # Since the DataFrame is indexed by automobile_use, we can directly access it
+            # if usage_type in self.usage_type_factors.index:
+            #     row = self.usage_type_factors.loc[usage_type]
+            #     # Get the factor for this coverage using the mapped column name
+            #     if column_name in row:
+            #         factor = float(row[column_name])
+            #         logger.info(f"Usage type factor for {coverage} (column {column_name}): {factor}")
+            #         return factor
+            #     else:
+            #         logger.warning(f"Column {column_name} not found for usage type {usage_type}")
+            #         return 1.0
+            
+            # logger.warning(f"No usage type factor found for {coverage}, using default 1.0")
+            # return 1.0
             
         except Exception as e:
             logger.error(f"Error getting usage type factor for {coverage}: {e}")

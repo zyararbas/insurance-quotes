@@ -71,20 +71,20 @@ class DriverAdjustmentAggregator:
                 driver_factor_breakdown['safety_record_factor'] = safety_record_factor
                 
 
-                # main here
+                
 
                 # 5. Single Automobile Factor
                 single_auto_factor = self.driver_lookup_service.get_single_automobile_factor(coverage, usage)
                 driver_factor_breakdown['single_auto_factor'] = single_auto_factor
 
-                # oy-saf here, switching branches to oy-gamf
+                
 
 
                 # 6. Annual Mileage Factor (part of driver adjustment factor)
                 annual_mileage_factor = self.driver_lookup_service.get_annual_mileage_factor(coverage, usage)
                 driver_factor_breakdown['annual_mileage_factor'] = annual_mileage_factor
 
-                #oy-gamf here
+                
 
                 # 7. Usage Type Factor (part of driver adjustment factor)
                 usage_type_factor = self.driver_lookup_service.get_usage_type_factor(coverage, usage)
