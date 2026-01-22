@@ -12,9 +12,11 @@ This service provides a clean API for all vehicle specification use cases.
 
 import logging
 from typing import Dict, Any, List, Optional
+import time
 from app.services.vehicle_search.vehicle_search_service import VehicleSearchService 
 from app.services.vehicle_search.ai_assistant_service_gemini_sdk import AIAssistantServiceGeminiSDK 
-from app.services.vector_databases.vehicle_rates_search import get_vehicle_rates_db 
+# from app.services.vector_databases.vehicle_rates_search import get_vehicle_rates_db 
+from app.services.vector_databases.vehicle_rates_chroma import get_vehicle_rates_chromadb
 logger = logging.getLogger(__name__)
 
 class VehicleSpecOrchestrator:
@@ -29,7 +31,8 @@ class VehicleSpecOrchestrator:
         """Initialize the vehicle specification orchestrator."""
         self.search_service = VehicleSearchService()
         self.ai_service = AIAssistantServiceGeminiSDK()
-        self.vehicle_rates_vector_db = get_vehicle_rates_db()
+        #self.vehicle_rates_vector_db = get_vehicle_rates_db()
+        self.vehicle_rates_chromadb = get_vehicle_rates_chromadb()
         
         # Initialize services
         self._initialized = False
@@ -68,27 +71,37 @@ class VehicleSpecOrchestrator:
             Dict containing the final vehicle specification or questions for clarification
         """
         try:
+            start_time = time.time()
             if not self._initialized:
                 self.initialize()
             
             # Step 1: Perform vehicle search (with built-in VIN lookup)
+            step_1_start_time = time.time()
             search_result = self.search_service.search_vehicles(
                 vin=vin,
                 make=make,
                 model=model,
                 year=year
             )
-            
+            step_1_duration = time.time() - step_1_start_time
+            logger.info(f"TIMING ======= vehicle_spec_orchestrator search_vehicles took {step_1_duration:.4f} seconds")
             # Check for search errors
-            if 'error' in search_result:
+            if 'error' in search_result: 
                 return search_result
-            
+            search_results_db = None
             search_results = search_result.get('vehicles', [])
             vin_data = search_result.get('vin_data')
             if not search_results:
-                print("No search results found")
-                search_results = self.vehicle_rates_vector_db.search_by_vin_data(vin_data) 
-
+                print("No search results found, search by vector db RAG ")
+                # search_results_db = self.vehicle_rates_vector_db.search_by_vin_data(vin_data) 
+                step_rag_start_time = time.time()
+                search_results = self.vehicle_rates_chromadb.search_by_vin_data(vin_data) 
+                step_rag_duration = time.time() - step_rag_start_time
+                logger.info(f"TIMING ======= vehicle_spec_orchestrator rag search_by_vin_data took {step_rag_duration:.4f} seconds")
+            # if search_results_db:    
+            #     print(search_results_db)
+            # if search_results:    
+            #     print(search_results)
             if not search_results:
                 result = self._process_results(
                     vin_data, {"make": vin_data.get('make'),"model": vin_data.get('model'), "year": vin_data.get('year')}, search_results, {}, {}
@@ -96,15 +109,22 @@ class VehicleSpecOrchestrator:
                 return result 
             
             # Step 2: AI interpretation with deduplication
+            step_ai_start_time = time.time()
             ai_result = self._perform_ai_interpretation(
                 vin_data, search_results, additional_info, conversation_history
-            )
+            )  
+            step_ai_duration = time.time() - step_ai_start_time
+            logger.info(f"TIMING ======= vehicle_spec_orchestrator _perform_ai_interpretation took {step_ai_duration:.4f} seconds")
             
             # Step 3: Process and format results
+            step_process_start_time = time.time()
             result = self._process_results(
                 vin_data, search_result.get('search_criteria', {make: vin_data.get('make'), model: vin_data.get('model'), year: vin_data.get('year')}), search_results, ai_result, conversation_history
             )
-            
+            step_process_duration = time.time() - step_process_start_time
+            logger.info(f"VehicleSpecOrchestrator.step_process took {step_process_duration:.4f} seconds")            
+            duration = time.time() - start_time
+            logger.info(f"VehicleSpecOrchestrator.process_vehicle_request took {duration:.4f} seconds")
             return result
             
         except Exception as e:
@@ -327,15 +347,6 @@ class VehicleSpecOrchestrator:
                     return vehicle
             logger.info(f"❌ No component match found")
             
-            # Try fuzzy matching
-            logger.info(f"=== FUZZY MATCH ATTEMPT ===")
-            for i, vehicle in enumerate(search_results):
-                vehicle_str = self._create_vehicle_string(vehicle)
-                if self._fuzzy_match(vehicle_str, match):
-                    logger.info(f"✅ FUZZY MATCH FOUND: Vehicle {i+1}")
-                    return vehicle
-            logger.info(f"❌ No fuzzy match found")
-            
             logger.warning(f"=== MATCHING FAILED ===")
             logger.warning(f"Could not find match for: '{match}'")
             logger.warning(f"Available vehicles: {[self._create_vehicle_string(v) for v in search_results[:5]]}")
@@ -391,32 +402,7 @@ class VehicleSpecOrchestrator:
             components['make'] = parts[1]
             components['model'] = parts[2]
         
-        # Extract series (look for patterns like XDRIVE 30I, GT V8, etc.)
-        if 'XDRIVE' in match_str.upper():
-            components['series'] = 'XDRIVE 30I'
-        elif 'SDRIVE' in match_str.upper():
-            components['series'] = 'SDRIVE 30I'
-        elif 'GT V8' in match_str.upper():
-            components['series'] = 'GT V8'
-        elif 'GT' in match_str.upper() and 'V8' not in match_str.upper():
-            components['series'] = 'GT'
-        elif 'GTC V8' in match_str.upper():
-            components['series'] = 'GTC V8'
-        elif 'GTC' in match_str.upper() and 'V8' not in match_str.upper():
-            components['series'] = 'GTC'
         
-        # Extract package (look for CONVENIENCE, EXECUTIVE, etc.)
-        package_keywords = ['CONVENIENCE', 'EXECUTIVE', 'PREMIUM', 'SPORT']
-        for keyword in package_keywords:
-            if keyword in match_str.upper():
-                components['package'] = keyword
-                break
-        
-        # Extract style (look for AWD, 2WD, 4D, etc.)
-        if 'AWD' in match_str.upper():
-            components['style'] = 'AWD 4D'
-        elif '2WD' in match_str.upper():
-            components['style'] = '2WD 4D'
         
         return components
     
@@ -436,23 +422,6 @@ class VehicleSpecOrchestrator:
             elif key == 'style' and vehicle.get('style', '').upper() != value.upper():
                 return False
         return True
-    
-    def _fuzzy_match(self, vehicle_str: str, match_str: str) -> bool:
-        """Perform fuzzy matching between vehicle string and match string."""
-        # Normalize both strings for comparison
-        vehicle_normalized = vehicle_str.upper().replace(' ', '').replace('-', '')
-        match_normalized = match_str.upper().replace(' ', '').replace('-', '')
-        
-        # Check if key components are present
-        key_components = ['BMW', 'X3', 'XDRIVE', 'CONVENIENCE', 'AWD']
-        match_score = 0
-        
-        for component in key_components:
-            if component in vehicle_normalized and component in match_normalized:
-                match_score += 1
-        
-        # Consider it a match if at least 3 key components match
-        return match_score >= 3
     
     def _get_conflict_resolution_details(self, ai_result: Dict[str, Any]) -> Dict[str, Any]:
         """Get conflict resolution details from AI result."""

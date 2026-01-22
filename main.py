@@ -2,13 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routes import health, insurance_quotes
-from app.services.vector_databases.vehicle_rates_search import initialize_vehicle_rates_db
+# from app.services.vector_databases.vehicle_rates_search import initialize_vehicle_rates_db
+from app.services.vector_databases.vehicle_rates_chroma import initialize_vehicle_rates_chromadb   
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize the singleton
-    initialize_vehicle_rates_db()
+    # initialize_vehicle_rates_db()
+    initialize_vehicle_rates_chromadb()
     yield
     # Shutdown: Clean up if necessary (nothing to do for now)
 

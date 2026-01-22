@@ -3,7 +3,9 @@ import logging
 from typing import Dict, List, Optional
 from app.utils.data_loader import DataLoader        
 from app.models.models import Vehicle, Usage
-from app.services.vector_databases.vehicle_rates_search import get_vehicle_rates_db 
+from app.models.models import RatingInput
+# from app.services.vector_databases.vehicle_rates_search import get_vehicle_rates_db 
+from app.services.vector_databases.vehicle_rates_chroma import get_vehicle_rates_chromadb
 logger = logging.getLogger(__name__)
 
 class VehicleFactorLookupService:
@@ -21,8 +23,8 @@ class VehicleFactorLookupService:
         self.fallback_vehicle_rating_groups: pd.DataFrame = None
         self.model_year_factors: pd.DataFrame = None
         self.lrg_factors: pd.DataFrame = None
-        self.vehicle_rates_vector_db = get_vehicle_rates_db()
-        
+        # self.vehicle_rates_vector_db = get_vehicle_rates_db()
+        self.vehicle_rates_chromadb = get_vehicle_rates_chromadb()
     def initialize(self):
         """Loads all vehicle factor data tables."""
         self.vehicle_rating_groups = self.data_loader.load_vehicle_ratings_groups()
@@ -32,14 +34,14 @@ class VehicleFactorLookupService:
         
         logger.info("VehicleFactorLookupService initialized")
         
-    def get_vehicle_rating_groups(self, vehicle: Vehicle) -> Dict[str, int]:
+    def get_vehicle_rating_groups(self, rating_input: RatingInput) -> Dict[str, int]:
         """
         Gets the vehicle rating groups (DRG, GRG, VSD, LRG) for a specific vehicle.
         Returns: {'drg': int, 'grg': int, 'vsd': str, 'lrg': int}
         """
         if self.vehicle_rating_groups is None:
             self.initialize()
-            
+        vehicle = rating_input.vehicle
         try:
             # Build the lookup key using the same format as the data loader
             parts = [str(vehicle.year), vehicle.make, vehicle.model]
@@ -71,8 +73,8 @@ class VehicleFactorLookupService:
                 # vehicle_rate_search.initialize()
                 print("No search results found")
                 vin_data = vehicle.dict()
-                search_results = self.vehicle_rates_vector_db.search_by_vin_data(vin_data) 
-                
+                # search_results = self.vehicle_rates_vector_db.search_by_vin_data(vin_data) 
+                search_results = self.vehicle_rates_chromadb.search_by_vin_data(vin_data) 
                 if search_results:
                     top_result = search_results[0]
                     rating_groups = {
@@ -155,19 +157,19 @@ class VehicleFactorLookupService:
             logger.error(f"Error getting LRG factor for {coverage} at LRG {lrg_code}: {e}")
             return 1.0
             
-    def calculate_vehicle_factors(self, vehicle: Vehicle, usage: Usage, coverages: List[str]) -> Dict:
+    def calculate_vehicle_factors(self, rating_input: RatingInput) -> Dict:
         """
         Calculates all vehicle factors for the given coverages.
         Returns: {coverage: {'combined_factor': float, 'breakdown': dict}}
         """
         if self.vehicle_rating_groups is None:
             self.initialize()
-            
+        vehicle = rating_input.vehicle    
         # Get vehicle rating groups
-        rating_groups = self.get_vehicle_rating_groups(vehicle)
+        rating_groups = self.get_vehicle_rating_groups(rating_input)
         
         results = {}
-        for coverage in coverages:
+        for coverage in rating_input.coverages:
             # Model year factor
             model_year_factor = self.get_model_year_factor(coverage, vehicle.year)
             
@@ -178,8 +180,8 @@ class VehicleFactorLookupService:
             
             # Combined vehicle factor
             combined_factor = model_year_factor * lrg_factor
-            
-            results[coverage] = {
+            coverage_key = coverage[0]
+            results[coverage_key] = {
                 'combined_factor': combined_factor,
                 'breakdown': {
                     'model_year_factor': model_year_factor,

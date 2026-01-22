@@ -160,13 +160,16 @@ class AdapterService:
             additional_vehicles_info = policy_data.get("vehicles", []) 
             coverages_choise = payload.get("additional_info", {}).get("general_questions", {}).get("coverageLevel", "min")
             coverage_info = COVERAGES.get(coverages_choise.lower(), {})
+            zip_code_override = payload.get("additional_info", {}).get("general_questions", {}).get("zip_code", "")
+            if zip_code_override:
+                zip_code_full = zip_code_override
         else: 
             zip_code_full = payload.get("additional_info", {}).get("general_questions", {}).get("zip_code", "")
             coverages_choise = payload.get("additional_info", {}).get("general_questions", {}).get("coverageLevel", "min")
             coverage_info = COVERAGES.get(coverages_choise.lower(), {})
         
         additional_vehicles_info = payload.get("additional_info", {}).get("vehicles", [])
-
+   
         # Extract shared information
         
         zip_code = zip_code_full.split("-")[0] if zip_code_full else ""

@@ -33,7 +33,7 @@ class AIAssistantServiceGemini:
             # Using the v1 REST API endpoint
             api_url='https://generativelanguage.googleapis.com/v1/models/',
             api_key_env='GEMINI_API_KEY', # Environment variable for Gemini Key
-            model='gemini-2.5-flash' # The requested model
+            model='gemini-3-flash-preview' # The requested model
         )
     }
     

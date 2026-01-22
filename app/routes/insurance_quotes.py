@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional, List
+import time
 
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
@@ -100,6 +101,7 @@ def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
         # Initialize the orchestrator
         orchestrator = VehicleSpecOrchestrator()
         
+        start_time = time.time()
         # Process the vehicle specification request
         result = orchestrator.process_vehicle_request(
             vin=request.vin,
@@ -109,6 +111,8 @@ def vehicle_spec_orchestrator(request: ComprehensiveVehicleSearchRequest):
             additional_info=request.additional_info,
             conversation_history=request.conversation_history
         )
+        duration = time.time() - start_time
+        logger.info(f"API /vehicle-spec-orchestrator/ took {duration:.4f} seconds")
         
         # Handle error responses
         if result.get('error'):

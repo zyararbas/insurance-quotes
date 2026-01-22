@@ -70,14 +70,12 @@ class CoverageCalculationAggregator:
         
         # Step 3: Calculate Vehicle Factors
         logger.info("--- Step 3: Calculating Vehicle Factors ---")
-        vehicle_factors = self.vehicle_factor_service.calculate_vehicle_factors(
-            rating_input.vehicle, rating_input.usage, selected_coverages
-        )
+        vehicle_factors = self.vehicle_factor_service.calculate_vehicle_factors(rating_input)
         logger.info(f"Vehicle factors: {vehicle_factors}")
         
         # Step 4: Calculate Coverage Factors (deductibles, limits)
         logger.info("--- Step 4: Calculating Coverage Factors ---")
-        vehicle_rating_groups = self.vehicle_factor_service.get_vehicle_rating_groups(rating_input.vehicle)
+        vehicle_rating_groups = self.vehicle_factor_service.get_vehicle_rating_groups(rating_input)
         coverage_factors = self.coverage_factor_service.calculate_coverage_factors(
             rating_input.coverages, vehicle_rating_groups
         )
@@ -270,11 +268,9 @@ class CoverageCalculationAggregator:
             rating_input.discounts
         )
         
-        vehicle_factors = self.vehicle_factor_service.calculate_vehicle_factors(
-            rating_input.vehicle, rating_input.usage, [coverage]
-        )
-        
-        vehicle_rating_groups = self.vehicle_factor_service.get_vehicle_rating_groups(rating_input.vehicle)
+        vehicle_factors = self.vehicle_factor_service.calculate_vehicle_factors(rating_input)
+    
+        vehicle_rating_groups = self.vehicle_factor_service.get_vehicle_rating_groups(rating_input)
         coverage_factors = self.coverage_factor_service.calculate_coverage_factors(
             rating_input.coverages, vehicle_rating_groups
         )

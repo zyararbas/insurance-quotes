@@ -256,7 +256,7 @@ class AIAssistantServiceGeminiSDK:
     def _prepare_context(self, vin_data: Optional[Dict], search_results: List[Dict], additional_info: str, conversation_history: List[Dict[str, str]] = None) -> Dict[str, Any]:
         context = {'search_results': search_results, 'additional_info': additional_info, 'total_matches': len(search_results), 'conversation_history': conversation_history or []}
         if vin_data:
-            context['vin_data'] = {k: vin_data.get(k) for k in ['make', 'model', 'year', 'body_class', 'engine_config', 'fuel_type', 'drive_type', 'transmission', 'trim', 'series']}
+            context['vin_data'] = {k: vin_data.get(k) for k in ['make', 'model', 'year', 'body_class', 'engine_config', 'fuel_type', 'drive_type', 'transmission', 'trim', 'series', 'engine_displacement_(l)']}
         return context
     
     def _create_prompt(self, context: Dict[str, Any]) -> str:
@@ -289,9 +289,24 @@ IMPORTANT: When returning a match, use this EXACT format:
         if context.get('vin_data'):
             vin_data = context['vin_data']; prompt += f"\n**SEARCH CRITERIA:**\n"
             prompt += f"Year: {vin_data.get('year', '')}\n"; prompt += f"Make: {vin_data.get('make', '')}\n"; prompt += f"Model: {vin_data.get('model', '')}\n"
-            if vin_data.get('body_class'): prompt += f"Body Class: {vin_data.get('body_class')}\n"
+            if vin_data.get('body_class'): prompt += f"Body Class: {vin_data.get('body_class')}"
+            if vin_data.get('doors'):
+                prompt += f" {vin_data.get('doors')}D\n"
+                if vin_data.get('doors') == '4':
+                    prompt += " SED\n"
+                elif vin_data.get('doors') == '2':
+                    prompt += "CPE COUPE\n "
+            prompt += "\n"
             if vin_data.get('drive_type'): prompt += f"Drive Type: {vin_data.get('drive_type')}\n"
             if vin_data.get('engine_config'): prompt += f"Engine: {vin_data.get('engine_config')}\n"
+            if vin_data.get('engine_displacement_(l)'): prompt += f"{vin_data.get('engine_displacement_(l)')}L"
+            if vin_data.get('engine_number_of_cylinders'): prompt += f"{vin_data.get('engine_number_of_cylinders')}CYL"
+            fuel_type = vin_data.get('fuel_type') or vin_data.get('fuel_type___primary')
+            if fuel_type:
+                if fuel_type == 'Gasoline': prompt += f"Gas\n"
+                elif fuel_type == 'Diesel': prompt += f"DSL\n"
+                else: prompt+= f"{fuel_type}\n"
+
         elif context['search_results']:
             first_vehicle = context['search_results'][0]; prompt += f"\n**SEARCH CRITERIA:**\n"
             prompt += f"Year: {first_vehicle.get('year', '')}\n"; prompt += f"Make: {first_vehicle.get('make', '')}\n"; prompt += f"Model: {first_vehicle.get('model', '')}\n"

@@ -3,8 +3,17 @@ import requests
 from typing import Dict, Any, List, Optional
 from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 from datetime import datetime
+import math
 
 logger = logging.getLogger(__name__)
+def round_up(num, dec=0):
+    """
+    Rounds a number up to a specified number of decimal places.
+    """
+    if dec < 0:
+        raise ValueError("Decimal places (dec) must be non-negative.")
+    mult = 10**dec
+    return math.ceil(num * mult) / mult
 
 class VehicleSearchService:
     """
@@ -117,13 +126,13 @@ class VehicleSearchService:
             response = self.vin_session.get(
                 f"{self.vin_base_url}/decodevin/{vin}",
                 params={'format': 'json'},
-                timeout=60
+                timeout=120
             )
             response.raise_for_status()
             
             data = response.json()
             
-            if 'Results returned successfully' in data.get('Message', '') and data.get('Results'):
+            if data.get('Results'):
                 return self._parse_vin_data(data)
             else:
                 raise ValueError(f"VIN lookup failed: {data.get('Message', 'Unknown error')}")
@@ -161,15 +170,20 @@ class VehicleSearchService:
             'trim': self._clean_text(vehicle_data.get('trim', '')), 
             'body_class': self._clean_text(vehicle_data.get('body_class', '')),
             'drive_type': self._clean_text(vehicle_data.get('drive_type', '')),
-            'fuel_type': self._clean_text(vehicle_data.get('fuel_type_-_primary', '')),
+            'fuel_type': self._clean_text(vehicle_data.get('fuel_type___primary', '')),
             'engine_config': self._clean_text(vehicle_data.get('engine_configuration', '')),
             'transmission': self._clean_text(vehicle_data.get('transmission_style', '')),
             'doors': self._parse_number(vehicle_data.get('doors', '')),
             'windows': self._parse_number(vehicle_data.get('windows', '')),
             'wheels': self._parse_number(vehicle_data.get('wheels', '')),
-            'gvwr': self._clean_text(vehicle_data.get('gvwr', ''))
+            'gvwr': self._clean_text(vehicle_data.get('gvwr', '')),
         }
-        
+        displacement = self._clean_text(vehicle_data.get('displacement_(l)', ''))
+        if displacement and displacement != '':
+            try:
+                parsed_data['engine_displacement_(l)'] = round_up(float(displacement), 1)
+            except ValueError:
+                logger.error(f"Invalid displacement value: {displacement}")
         # Remove empty values
         parsed_data = {k: v for k, v in parsed_data.items() if v}
         

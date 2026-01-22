@@ -95,11 +95,11 @@ class PricingOrchestrator:
         
         # Get vehicle factors
         vehicle_factors = self.coverage_calculator.vehicle_factor_service.calculate_vehicle_factors(
-            rating_input.vehicle, rating_input.usage, selected_coverages
+            rating_input
         )
         
         # Get vehicle rating groups
-        vehicle_rating_groups = self.coverage_calculator.vehicle_factor_service.get_vehicle_rating_groups(rating_input.vehicle)
+        vehicle_rating_groups = self.coverage_calculator.vehicle_factor_service.get_vehicle_rating_groups(rating_input)
         
         # Get coverage factors
         coverage_factors = self.coverage_calculator.coverage_factor_service.calculate_coverage_factors(
