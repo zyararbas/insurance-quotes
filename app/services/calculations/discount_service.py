@@ -348,16 +348,16 @@ class DiscountService:
             4: 0.21,
             5: 0.28,
         }
-
+        
 
         discount = MULTI_LINE_DISCOUNTS.get(int(multi_line_type), 0.0)
         return 1.0 - discount
 
         
-        # try:
+        # DEPRECATED 
+        # multi_line_data = self.data_loader.load_multi_line_discount()
         #     # Load multi-line discount data
-        #     multi_line_data = self.data_loader.load_multi_line_discount()
-            
+        
         #     # Look up the discount for the specified multi-line type
         #     if multi_line_type in multi_line_data.index:
         #         discount_percentage = float(multi_line_data.loc[multi_line_type, 'discount'])
