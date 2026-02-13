@@ -56,7 +56,7 @@ class CoverageCalculationAggregator:
         )
         logger.info(f"Base factors: {base_factors}")
 
-        # --------- DONE UNTIL NOW ------------------
+       
 
         
         # Step 2: Calculate Driver Adjustment Factors
@@ -67,6 +67,8 @@ class CoverageCalculationAggregator:
             selected_coverages,
             rating_input.discounts
         )
+
+         # --------- DONE UNTIL NOW ------------------
         
         # Step 3: Calculate Vehicle Factors
         logger.info("--- Step 3: Calculating Vehicle Factors ---")
@@ -74,6 +76,8 @@ class CoverageCalculationAggregator:
             rating_input.vehicle, rating_input.usage, selected_coverages
         )
         logger.info(f"Vehicle factors: {vehicle_factors}")
+
+        # WORKING POINTER
         
         # Step 4: Calculate Coverage Factors (deductibles, limits)
         logger.info("--- Step 4: Calculating Coverage Factors ---")

@@ -56,9 +56,10 @@ class DiscountService:
 
     def initialize(self):
         """Loads the discount factor tables into memory."""
-        self.transportation_network_factors = self.data_loader.load_transportation_network_factors()
-        self.transportation_friends_factors = self.data_loader.load_transportation_friends_factors()
-        self.federal_employee_factors = self.data_loader.load_federal_employee_factors()
+
+        # self.transportation_network_factors = self.data_loader.load_transportation_network_factors()
+        # self.transportation_friends_factors = self.data_loader.load_transportation_friends_factors()
+        # self.federal_employee_factors = self.data_loader.load_federal_employee_factors()
 
     def calculate_discount_factors(self, discounts: Discounts, special_factors, coverages: List[str]) -> Dict:
         """
@@ -118,8 +119,6 @@ class DiscountService:
             )
             coverage_discounts['transportation_network'] = network_factor
             
-
-            #here
             
             # 7. Multi-line Discount
             multi_line_factor = self._calculate_multi_line_discount(discounts.multi_line, coverage)
