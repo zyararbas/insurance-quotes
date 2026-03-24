@@ -3,3 +3,4 @@ Removed fallback_vehicle_rating_groups - Sheet1.csv and converted to static arra
 Removed model_year_factors - Sheet1.csv and converted to static array in data_loader.py
 Removed annual_mileage_factor - Sheet1.csv and converted to static array in data_loader.py
 Removed auto_usage_type - Sheet1.csv and converted to static array in data_loader.py
+Removed single_auto_factor - Sheet1.csv and converted to static array in data_loader.py

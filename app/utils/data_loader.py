@@ -201,7 +201,14 @@ class DataLoader:
 
     def load_single_auto_factors(self) -> pd.DataFrame:
         """Loads single automobile factors."""
-        return self.load_table('car_factors/single_auto_factor - Sheet1.csv')
+        data = [
+            {'coverage': 'BIPD', 'single_automobile_factor': 1.259},
+            {'coverage': 'COLL', 'single_automobile_factor': 1.255},
+            {'coverage': 'COMP', 'single_automobile_factor': 1.081},
+            {'coverage': 'MPC', 'single_automobile_factor': 1.263},
+            {'coverage': 'U', 'single_automobile_factor': 1.319}
+        ]
+        return pd.DataFrame(data)
 
     def load_annual_mileage_factors(self) -> pd.DataFrame:
         """Loads annual mileage factors (alias)."""
