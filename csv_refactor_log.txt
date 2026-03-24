@@ -21,3 +21,4 @@ Removed good_student_discount - Sheet1.csv and converted to static array in data
 Removed mature_driver_improvement_course_discount - Sheet1.csv and converted to static array in data_loader.py
 Removed mulitple_line_discount - Sheet1.csv and converted to static array in data_loader.py
 Removed loyalty_discount_by_year_coverage - Sheet1.csv and converted to static array in data_loader.py
+Removed student_away_at_school_discount - Sheet1.csv and converted to static array in data_loader.py

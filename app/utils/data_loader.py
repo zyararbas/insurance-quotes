@@ -470,7 +470,14 @@ class DataLoader:
 
     def load_student_away_discount(self) -> pd.DataFrame:
         """Loads student away at school discount factors."""
-        df = self.load_table('discounts/student_away_at_school_discount - Sheet1.csv')
+        data = [
+            {'coverage': 'BIPD', 'discount_factor': 0.981},
+            {'coverage': 'COLL', 'discount_factor': 0.944},
+            {'coverage': 'COMP', 'discount_factor': 0.974},
+            {'coverage': 'MPC', 'discount_factor': 0.944},
+            {'coverage': 'UM', 'discount_factor': 0.901}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('coverage')
 
     def load_loyalty_discount(self) -> pd.DataFrame:
