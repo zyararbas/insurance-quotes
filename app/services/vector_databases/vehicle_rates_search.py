@@ -358,7 +358,8 @@ def test_vehicle_rates():
     MONGO_COLLECTION_NAME = "vehicle-rates"
     MONGO_REBUILD_DB = False 
      # --- CSV Configuration ---
-    RATINGS_FILE = "/Users/zubeydeyararbas/ml/insurance-quotes/Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv"
+    import os
+    RATINGS_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv"))
     abstract_db_folder = "./vehicle_rates_csv"
     rates_app = VehicleRatesVectorDB( 
         db_folder=abstract_db_folder     

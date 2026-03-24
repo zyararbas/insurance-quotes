@@ -23,3 +23,4 @@ Removed mulitple_line_discount - Sheet1.csv and converted to static array in dat
 Removed loyalty_discount_by_year_coverage - Sheet1.csv and converted to static array in data_loader.py
 Removed student_away_at_school_discount - Sheet1.csv and converted to static array in data_loader.py
 Removed auto_ratings_2024_2001.csv and offloaded to PyMongo. IMPORTANT: Create a collection named 'vehicle-rates' in MongoDB to host this data.
+Preserved vehicle_ratings_groups.csv and Raw_DAta directory upon user request. Fixed dependent vector DB paths and prevented Pandas crashes.

@@ -69,7 +69,7 @@ class CsvDataLoader():
 
 # --- EXECUTION ---
 if __name__ == "__main__":
-    RATINGS_FILE = "../../Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv"
+    RATINGS_FILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../Data/California/STATEFARM_CA_Insurance__tables/car_factors/vehicle_ratings_groups - Sheet1.csv"))
     loader = CsvDataLoader(RATINGS_FILE)
     loader.index_data()
     
