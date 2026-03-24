@@ -251,8 +251,30 @@ class DataLoader:
 
     def load_bi_limits(self) -> pd.DataFrame:
         """Loads bodily injury limits and factors."""
-        df = self.load_table('coverage_factors/bi_limits - Sheet1.csv')
-        return df
+        data = [
+            {'bi_limits': '30/60', 'factor': 1.03},
+            {'bi_limits': '50/100', 'factor': 1.09},
+            {'bi_limits': '50/150', 'factor': 1.11},
+            {'bi_limits': '100/100', 'factor': 1.14},
+            {'bi_limits': '100/200', 'factor': 1.17},
+            {'bi_limits': '100/300', 'factor': 1.19},
+            {'bi_limits': '100/500', 'factor': 1.23},
+            {'bi_limits': '150/300', 'factor': 1.23},
+            {'bi_limits': '200/300', 'factor': 1.27},
+            {'bi_limits': '200/500', 'factor': 1.31},
+            {'bi_limits': '250/500', 'factor': 1.35},
+            {'bi_limits': '300/300', 'factor': 1.34},
+            {'bi_limits': '300/500', 'factor': 1.38},
+            {'bi_limits': '300/750', 'factor': 1.42},
+            {'bi_limits': '300/1000', 'factor': 1.45},
+            {'bi_limits': '500/500', 'factor': 1.47},
+            {'bi_limits': '500/750', 'factor': 1.5},
+            {'bi_limits': '500/1000', 'factor': 1.52},
+            {'bi_limits': '750/750', 'factor': 1.55},
+            {'bi_limits': '750/1000', 'factor': 1.57},
+            {'bi_limits': '1000/1000', 'factor': 1.61}
+        ]
+        return pd.DataFrame(data)
 
     def load_pd_limits(self) -> pd.DataFrame:
         """Loads property damage limits and factors."""

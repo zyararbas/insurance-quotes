@@ -4,3 +4,4 @@ Removed model_year_factors - Sheet1.csv and converted to static array in data_lo
 Removed annual_mileage_factor - Sheet1.csv and converted to static array in data_loader.py
 Removed auto_usage_type - Sheet1.csv and converted to static array in data_loader.py
 Removed single_auto_factor - Sheet1.csv and converted to static array in data_loader.py
+Removed bi_limits - Sheet1.csv and converted to static array in data_loader.py
