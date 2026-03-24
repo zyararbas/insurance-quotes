@@ -472,8 +472,14 @@ class DataLoader:
 
     def load_transportation_network_factors(self) -> pd.DataFrame:
         """Loads transportation network company factors."""
-        df = self.load_table('coverage_factors/transporation_network_company - Sheet1.csv')
-        return df
+        data = [
+            {'Coverage': 'BIPD', 'Factor': 1.15},
+            {'Coverage': 'COLL', 'Factor': 1.25},
+            {'Coverage': 'COMP', 'Factor': 1.25},
+            {'Coverage': 'MPC', 'Factor': 1.1},
+            {'Coverage': 'U', 'Factor': 1.0}
+        ]
+        return pd.DataFrame(data)
 
     def load_transportation_friends_factors(self) -> pd.DataFrame:
         """Loads transportation of friends/occupation factors."""
