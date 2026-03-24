@@ -456,7 +456,18 @@ class DataLoader:
 
     def load_lrg_code_factors(self) -> pd.DataFrame:
         """Loads LRG code factors."""
-        df = self.load_table('coverage_factors/lrg_code_factors - Sheet1.csv')
+        data = [
+            {'lrg': 1, 'factor': 0.75},
+            {'lrg': 2, 'factor': 0.76},
+            {'lrg': 3, 'factor': 0.824},
+            {'lrg': 4, 'factor': 0.95},
+            {'lrg': 5, 'factor': 1.0},
+            {'lrg': 6, 'factor': 1.054},
+            {'lrg': 7, 'factor': 1.13},
+            {'lrg': 8, 'factor': 1.16},
+            {'lrg': 9, 'factor': 1.18}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('lrg')
 
     def load_transportation_network_factors(self) -> pd.DataFrame:
