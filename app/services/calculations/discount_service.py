@@ -29,6 +29,20 @@ FEDERAL_EMPLOYEE_FACTORS = {
     'No': 1
 }
 
+TRANSPORTATION_FRIENDS_FACTOR_LOOKUP = {
+    'Yes': 1.2,
+    'No':  1.0,
+}
+           
+
+TRANSPORTATION_NETWORK_FACTOR_LOOKUP = {
+    'BIPD': 1.15,
+    'COLL': 1.25,
+    'COMP': 1.25,
+    'MPC': 1.10,
+    'U':    1.00,  # UM is mapped to U
+}
+
 
 class DiscountService:
     """Service for calculating various discount factors for the pricing calculation."""
@@ -42,9 +56,10 @@ class DiscountService:
 
     def initialize(self):
         """Loads the discount factor tables into memory."""
-        self.transportation_network_factors = self.data_loader.load_transportation_network_factors()
-        self.transportation_friends_factors = self.data_loader.load_transportation_friends_factors()
-        self.federal_employee_factors = self.data_loader.load_federal_employee_factors()
+
+        # self.transportation_network_factors = self.data_loader.load_transportation_network_factors()
+        # self.transportation_friends_factors = self.data_loader.load_transportation_friends_factors()
+        # self.federal_employee_factors = self.data_loader.load_federal_employee_factors()
 
     def calculate_discount_factors(self, discounts: Discounts, special_factors, coverages: List[str]) -> Dict:
         """
@@ -76,29 +91,34 @@ class DiscountService:
             loyalty_factor = self._calculate_loyalty_discount(discounts.loyalty_years, coverage)
             coverage_discounts['loyalty'] = loyalty_factor
             
-            # testing works
+            
 
             # 3. Federal Employee Discount
             federal_employee_factor = self._calculate_federal_employee_discount(
                 special_factors.federal_employee, coverage
             )
+            
             coverage_discounts['federal_employee'] = federal_employee_factor
             
+
+
             # 4. CA Good Driver Discount
             good_driver_factor = self._calculate_good_driver_discount(discounts.good_driver)
-            coverage_discounts['good_driver'] = good_driver_factor
+            coverage_discounts['good_driver'] = good_driver_factor # no migration needed
             
             # 5. Transportation of Friends Factor
             friends_factor = self._calculate_transportation_friends_factor(
                 special_factors.transportation_of_friends, coverage
             )
-            coverage_discounts['transportation_friends'] = friends_factor
+            coverage_discounts['transportation_friends'] = friends_factor # done
             
+
             # 6. Transportation Network Use Factor
-            network_factor = self._calculate_transportation_network_factor(
+            network_factor = self._calculate_transportation_network_factor( # done 
                 special_factors.transportation_network_company, coverage
             )
             coverage_discounts['transportation_network'] = network_factor
+            
             
             # 7. Multi-line Discount
             multi_line_factor = self._calculate_multi_line_discount(discounts.multi_line, coverage)
@@ -253,11 +273,6 @@ class DiscountService:
         if not federal_employee:
             return 1.0
 
-        FEDERAL_EMPLOYEE_FACTORS = {
-            'Yes': 0.7,
-            'No': 1
-        }
-
         try:
             # Look up federal employee factor - it's the same for all coverages
             # The CSV has 'eligible ' (with trailing space) and 'factor' columns
@@ -282,15 +297,16 @@ class DiscountService:
         """Calculate transportation of friends factor."""
         if not transportation_friends:
             return 1.0
-            
+    
+         
         try:
             # Look up transportation friends factor - it's the same for all coverages
             # The CSV has 'eligbile' (typo) and 'factor' columns
-            eligible_row = self.transportation_friends_factors[self.transportation_friends_factors['eligbile'] == 'Yes']
-            if not eligible_row.empty:
-                factor = float(eligible_row['factor'].iloc[0])
+            factor = TRANSPORTATION_FRIENDS_FACTOR_LOOKUP.get('Yes')
+            if factor is not None:
                 logger.info(f"Transportation friends factor: {factor}")
-                return factor
+                return float(factor)
+
         except (KeyError, IndexError) as e:
             logger.warning(f"Transportation friends factor not found: {e}")
             
@@ -306,11 +322,13 @@ class DiscountService:
             # The CSV has 'Coverage' and 'Factor' columns
             # Map UM to U for CSV compatibility
             coverage_key = 'U' if coverage == 'UM' else coverage
-            coverage_row = self.transportation_network_factors[self.transportation_network_factors['Coverage'] == coverage_key]
-            if not coverage_row.empty:
-                factor = float(coverage_row['Factor'].iloc[0])
+
+            factor = TRANSPORTATION_NETWORK_FACTOR_LOOKUP.get(coverage_key)
+
+            if factor is not None:
                 logger.info(f"Transportation network factor for {coverage}: {factor}")
-                return factor
+                return float(factor)
+            
         except (KeyError, IndexError) as e:
             logger.warning(f"Transportation network factor not found for coverage {coverage}: {e}")
             
@@ -320,21 +338,35 @@ class DiscountService:
         """Calculate multi-line discount factor."""
         if not multi_line_type or multi_line_type == '':
             return 1.0
-            
-        try:
-            # Load multi-line discount data
-            multi_line_data = self.data_loader.load_multi_line_discount()
-            
-            # Look up the discount for the specified multi-line type
-            if multi_line_type in multi_line_data.index:
-                discount_percentage = float(multi_line_data.loc[multi_line_type, 'discount'])
-                # Convert percentage to factor (e.g., 0.04 = 4% discount = 0.96 factor)
-                factor = 1.0 - discount_percentage
-                logger.info(f"Multi-line discount for {multi_line_type}: {discount_percentage}% -> factor {factor}")
-                return factor
-            else:
-                logger.warning(f"Multi-line discount type '{multi_line_type}' not found in data")
-                return 1.0
-        except Exception as e:
-            logger.error(f"Error calculating multi-line discount: {e}")
-            return 1.0
+
+
+        MULTI_LINE_DISCOUNTS = {
+            1: 0.04,
+            2: 0.09,
+            3: 0.16,
+            4: 0.21,
+            5: 0.28,
+        }
+        
+
+        discount = MULTI_LINE_DISCOUNTS.get(int(multi_line_type), 0.0)
+        return 1.0 - discount
+
+        
+        # DEPRECATED 
+        # multi_line_data = self.data_loader.load_multi_line_discount()
+        #     # Load multi-line discount data
+        
+        #     # Look up the discount for the specified multi-line type
+        #     if multi_line_type in multi_line_data.index:
+        #         discount_percentage = float(multi_line_data.loc[multi_line_type, 'discount'])
+        #         # Convert percentage to factor (e.g., 0.04 = 4% discount = 0.96 factor)
+        #         factor = 1.0 - discount_percentage
+        #         logger.info(f"Multi-line discount for {multi_line_type}: {discount_percentage}% -> factor {factor}")
+        #         return factor
+        #     else:
+        #         logger.warning(f"Multi-line discount type '{multi_line_type}' not found in data")
+        #         return 1.0
+        # except Exception as e:
+        #     logger.error(f"Error calculating multi-line discount: {e}")
+        #     return 1.0

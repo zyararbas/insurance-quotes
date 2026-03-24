@@ -1,7 +1,8 @@
 import pandas as pd
 import logging
 from typing import List
-from app.utils.data_loader import DataLoader
+from app.utils.data_loader import DataLoader, VEHICLE_RATES
+from app.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,10 @@ class VehicleLookupService:
     def _load_vehicle_data(self):
         """Load vehicle data if not already loaded."""
         if self.vehicle_data is None:
-            self.vehicle_data = self.data_loader.load_table('car_factors/auto_ratings_2024_2001.csv')
-            logger.info("Vehicle data loaded for lookup service")
-    
+            self.vehicle_data = StorageService().get_collection_as_dataframe(VEHICLE_RATES)
+            logger.info(f"Vehicle data loaded for lookup service from MongoDB collection: {VEHICLE_RATES}")
+            #self.vehicle_data = self.data_loader.load_table('car_factors/auto_ratings_2024_2001.csv')
+            #logger.info("Vehicle data loaded for lookup service")
     def get_years(self) -> List[int]:
         """Get all available years."""
         self._load_vehicle_data()
@@ -155,9 +157,12 @@ class VehicleLookupService:
             (self.vehicle_data['BODYSTYLE'].fillna('') == style) &
             (self.vehicle_data['ENGINE'].fillna('') == engine)
         ]
-        # TODO. 
-        if not vehicle_data:
-             vehicle_data = fetchVehicleDataUsingRAG(year, make, model, series, package, style, engine)
+        # # TODO. 
+        # if not vehicle_data:
+        #      vehicle_data = fetchVehicleDataUsingRAG(year, make, model, series, package, style, engine)
+        # TODO: Implement RAG fallback. Commented out to prevent crash.
+        # if vehicle_data.empty:
+        #      vehicle_data = fetchVehicleDataUsingRAG(year, make, model, series, package, style, engine)
         if len(vehicle_data) > 0:
             row = vehicle_data.iloc[0]
             return {

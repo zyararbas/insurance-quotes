@@ -114,29 +114,86 @@ class VehicleFactorLookupService:
         """Gets the model year factor for a specific coverage and vehicle year."""
         if self.model_year_factors is None:
             self.initialize()
-            
+    
+        MODEL_YEAR_FACTORS = {
+            1999: {"bipd": 1.0, "coll": 0.46, "comp": 0.58, "mpc": 1.0},
+            2000: {"bipd": 1.0, "coll": 0.46, "comp": 0.58, "mpc": 1.0},
+            2001: {"bipd": 1.0, "coll": 0.46, "comp": 0.58, "mpc": 1.0},
+            2002: {"bipd": 1.0, "coll": 0.46, "comp": 0.58, "mpc": 1.0},
+            2003: {"bipd": 1.0, "coll": 0.47, "comp": 0.60, "mpc": 1.0},
+            2004: {"bipd": 1.0, "coll": 0.48, "comp": 0.62, "mpc": 1.0},
+            2005: {"bipd": 1.0, "coll": 0.50, "comp": 0.64, "mpc": 1.0},
+            2006: {"bipd": 1.0, "coll": 0.53, "comp": 0.67, "mpc": 1.0},
+            2007: {"bipd": 1.0, "coll": 0.56, "comp": 0.70, "mpc": 1.0},
+            2008: {"bipd": 1.0, "coll": 0.60, "comp": 0.72, "mpc": 1.0},
+            2009: {"bipd": 1.0, "coll": 0.64, "comp": 0.77, "mpc": 1.0},
+            2010: {"bipd": 1.0, "coll": 0.68, "comp": 0.79, "mpc": 1.0},
+            2011: {"bipd": 1.0, "coll": 0.72, "comp": 0.82, "mpc": 1.0},
+            2012: {"bipd": 1.0, "coll": 0.76, "comp": 0.84, "mpc": 1.0},
+            2013: {"bipd": 1.0, "coll": 0.80, "comp": 0.85, "mpc": 1.0},
+            2014: {"bipd": 1.0, "coll": 0.84, "comp": 0.91, "mpc": 1.0},
+            2015: {"bipd": 1.0, "coll": 0.88, "comp": 0.93, "mpc": 1.0},
+            2016: {"bipd": 1.0, "coll": 0.92, "comp": 0.95, "mpc": 1.0},
+            2017: {"bipd": 1.0, "coll": 0.96, "comp": 0.97, "mpc": 1.0},
+            2018: {"bipd": 1.0, "coll": 1.00, "comp": 1.00, "mpc": 1.0},
+            2019: {"bipd": 1.0, "coll": 1.05, "comp": 1.03, "mpc": 1.0},
+            2020: {"bipd": 1.0, "coll": 1.10, "comp": 1.06, "mpc": 1.0},
+            2021: {"bipd": 1.0, "coll": 1.16, "comp": 1.09, "mpc": 1.0},
+            2022: {"bipd": 1.0, "coll": 1.22, "comp": 1.12, "mpc": 1.0},
+        }
+
         try:
-            # Since the DataFrame is indexed by min_year, find the highest min_year that is <= year
-            best_min_year = -1
-            
-            # Get all min_year values that are <= the target year
-            valid_years = self.model_year_factors.index[self.model_year_factors.index <= year]
-            
-            if len(valid_years) > 0:
-                # Get the highest (maximum) min_year that is <= year
-                best_min_year = valid_years.max()
-                
-                # Get the factor for this coverage and year
-                factor = self.model_year_factors.loc[best_min_year, coverage.lower() + '_factor']
-                logger.info(f"Model year factor for {coverage} at year {year}: {factor}")
+                coverage = coverage.lower()
+
+                # Get all eligible years
+                valid_years = [y for y in MODEL_YEAR_FACTORS.keys() if y <= year]
+
+                if not valid_years:
+                    logger.warning(
+                        f"No model year factor found for {coverage} at year {year}, using default 1.0"
+                    )
+                    return 1.0
+
+                best_min_year = max(valid_years)
+
+                factor = MODEL_YEAR_FACTORS[best_min_year][coverage]
+
+                logger.info(
+                    f"Model year factor for {coverage} at year {year}: {factor}"
+                )
+
                 return float(factor)
-                    
-            logger.warning(f"No model year factor found for {coverage} at year {year}, using default 1.0")
-            return 1.0
-            
+
         except Exception as e:
-            logger.error(f"Error getting model year factor for {coverage} at year {year}: {e}")
+            logger.error(
+                f"Error getting model year factor for {coverage} at year {year}: {e}"
+            )
             return 1.0
+    
+
+        # DEPRECATED
+        # try:
+        #     # Since the DataFrame is indexed by min_year, find the highest min_year that is <= year
+        #     best_min_year = -1
+            
+        #     # Get all min_year values that are <= the target year
+        #     valid_years = self.model_year_factors.index[self.model_year_factors.index <= year]
+            
+        #     if len(valid_years) > 0:
+        #         # Get the highest (maximum) min_year that is <= year
+        #         best_min_year = valid_years.max()
+                
+        #         # Get the factor for this coverage and year
+        #         factor = self.model_year_factors.loc[best_min_year, coverage.lower() + '_factor']
+        #         logger.info(f"Model year factor for {coverage} at year {year}: {factor}")
+        #         return float(factor)
+                    
+        #     logger.warning(f"No model year factor found for {coverage} at year {year}, using default 1.0")
+        #     return 1.0
+            
+        # except Exception as e:
+        #     logger.error(f"Error getting model year factor for {coverage} at year {year}: {e}")
+        #     return 1.0
             
     def get_lrg_factor(self, coverage: str, lrg_code: int) -> float:
         """Gets the LRG factor for a specific coverage and LRG code."""
