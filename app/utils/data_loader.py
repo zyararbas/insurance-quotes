@@ -417,7 +417,11 @@ class DataLoader:
 
     def load_good_student_discount(self) -> pd.DataFrame:
         """Loads good student discount factors."""
-        df = self.load_table('discounts/good_student_discount - Sheet1.csv')
+        data = [
+            {'eligible': 'yes', 'discount': '20%'},
+            {'eligible': 'ne', 'discount': '0'}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('eligible')
 
     def load_inexperienced_driver_education_discount(self) -> pd.DataFrame:
