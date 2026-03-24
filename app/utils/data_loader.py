@@ -14,48 +14,48 @@ class DataLoader:
     """
     def __init__(self):
         # Assumes the 'Data' directory is at the app level.
-        self.base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'Data', 'California', 'STATEFARM_CA_Insurance__tables'))
-        logger.info(f"DataLoader initialized with base path: {self.base_path}")
+        # self.base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'Data', 'California', 'STATEFARM_CA_Insurance__tables'))
+        # logger.info(f"DataLoader initialized with base path: {self.base_path}")
         self.storage_service = StorageService()
-        if not os.path.isdir(self.base_path):
-            logger.warning(f"Data directory not found at expected path: {self.base_path}")
+        # if not os.path.isdir(self.base_path):
+        #     logger.warning(f"Data directory not found at expected path: {self.base_path}")
 
-    @lru_cache(maxsize=128)
-    def load_table(self, table_path: str) -> pd.DataFrame:
-        """
-        Loads a CSV table into a pandas DataFrame with LRU caching.
-        This decorator automatically caches the results of this function.
-        """
-        full_path = os.path.join(self.base_path, table_path)
-        try:
-            logger.info(f"Loading table from: {full_path}")
-            # Use the 'python' engine for more robust parsing of potentially tricky CSV files.
-            df = pd.read_csv(full_path, skipinitialspace=True, engine='python')
-            # Clean up column names (remove leading/trailing spaces)
-            df.columns = df.columns.str.strip()
-            return df
-        except FileNotFoundError:
-            logger.error(f"Failed to find table at {full_path}")
-            raise
-        except Exception as e:
-            logger.error(f"Failed to load table {table_path}: {e}")
-            raise
+    # @lru_cache(maxsize=128)
+    # def load_table(self, table_path: str) -> pd.DataFrame:
+    #     """
+    #     Loads a CSV table into a pandas DataFrame with LRU caching.
+    #     This decorator automatically caches the results of this function.
+    #     """
+    #     full_path = os.path.join(self.base_path, table_path)
+    #     try:
+    #         logger.info(f"Loading table from: {full_path}")
+    #         # Use the 'python' engine for more robust parsing of potentially tricky CSV files.
+    #         df = pd.read_csv(full_path, skipinitialspace=True, engine='python')
+    #         # Clean up column names (remove leading/trailing spaces)
+    #         df.columns = df.columns.str.strip()
+    #         return df
+    #     except FileNotFoundError:
+    #         logger.error(f"Failed to find table at {full_path}")
+    #         raise
+    #     except Exception as e:
+    #         logger.error(f"Failed to load table {table_path}: {e}")
+    #         raise
 
-    def load_base_rates(self) -> dict:
-        """Loads base rates and returns them as a {coverage: rate} dictionary."""
-        df = self.load_table('base_factors/base_rates - Sheet1.csv')
-        return pd.Series(df.base_rate.values, index=df.coverage).to_dict()
+    # def load_base_rates(self) -> dict:
+    #     """Loads base rates and returns them as a {coverage: rate} dictionary."""
+    #     df = self.load_table('base_factors/base_rates - Sheet1.csv')
+    #     return pd.Series(df.base_rate.values, index=df.coverage).to_dict()
 
-    def load_territory_factors(self) -> pd.DataFrame:
-        """Loads territory factors, indexed by zip code."""
-        df = self.load_table('base_factors/CA_zip_territory_factors - Sheet1.csv')
-        df = df.set_index('zip')
-        return df
+    # def load_territory_factors(self) -> pd.DataFrame:
+    #     """Loads territory factors, indexed by zip code."""
+    #     df = self.load_table('base_factors/CA_zip_territory_factors - Sheet1.csv')
+    #     df = df.set_index('zip')
+    #     return df
     # Deprecated 
-    def load_zip_territory_factors(self) -> pd.DataFrame:
-        """Loads zip territory factors (alias for load_territory_factors)."""
-        # return self.load_territory_factors()
-        return
+    # def load_zip_territory_factors(self) -> pd.DataFrame:
+    #     """Loads zip territory factors (alias for load_territory_factors)."""
+    #     # return self.load_territory_factors()
+    #     return
 
     def load_vehicle_ratings(self) -> pd.DataFrame:
         """Loads vehicle ratings groups."""
@@ -79,7 +79,6 @@ class DataLoader:
             logging.error(f"Vehicle rates could not be loaded {e}")
             raise Exception(e)
         
-
     def load_vehicle_ratings_groups(self) -> pd.DataFrame:
         """Loads vehicle ratings groups (alias for load_vehicle_ratings)."""
         return self.load_vehicle_ratings()
