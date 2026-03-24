@@ -1,0 +1,2 @@
+# CSV Refactor Log
+Removed fallback_vehicle_rating_groups - Sheet1.csv and converted to static array in data_loader.py

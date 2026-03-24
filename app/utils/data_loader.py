@@ -86,8 +86,39 @@ class DataLoader:
 
     def load_fallback_vehicle_ratings(self) -> pd.DataFrame:
         """Loads fallback vehicle ratings (by MSRP)."""
-        df = self.load_table('car_factors/fallback_vehicle_rating_groups - Sheet1.csv')
-        return df
+        data = [
+            {'MSRP_range': '$0 - $2200', 'MSRP_min': 0, 'MSRP_max': 2200, 'GRG': 1, 'DRG': 1, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$2201 - $3000', 'MSRP_min': 2201, 'MSRP_max': 3000, 'GRG': 2, 'DRG': 2, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$3001 - $4000', 'MSRP_min': 3001, 'MSRP_max': 4000, 'GRG': 3, 'DRG': 3, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$4001 - $5000', 'MSRP_min': 4001, 'MSRP_max': 5000, 'GRG': 4, 'DRG': 4, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$5001 - $6000', 'MSRP_min': 5001, 'MSRP_max': 6000, 'GRG': 5, 'DRG': 5, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$6001 - $7000', 'MSRP_min': 6001, 'MSRP_max': 7000, 'GRG': 6, 'DRG': 6, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$7001 - $8000', 'MSRP_min': 7001, 'MSRP_max': 8000, 'GRG': 7, 'DRG': 7, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$8001 - $9000', 'MSRP_min': 8001, 'MSRP_max': 9000, 'GRG': 8, 'DRG': 8, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$9001 - $10000', 'MSRP_min': 9001, 'MSRP_max': 10000, 'GRG': 9, 'DRG': 9, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$10001 - $11000', 'MSRP_min': 10001, 'MSRP_max': 11000, 'GRG': 10, 'DRG': 10, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$11001 - $12000', 'MSRP_min': 11001, 'MSRP_max': 12000, 'GRG': 11, 'DRG': 11, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$12001 - $14000', 'MSRP_min': 12001, 'MSRP_max': 14000, 'GRG': 12, 'DRG': 12, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$14001 - $16000', 'MSRP_min': 14001, 'MSRP_max': 16000, 'GRG': 13, 'DRG': 13, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$16001 - $18000', 'MSRP_min': 16001, 'MSRP_max': 18000, 'GRG': 14, 'DRG': 14, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$18001 - $20000', 'MSRP_min': 18001, 'MSRP_max': 20000, 'GRG': 15, 'DRG': 15, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$20001 - $22000', 'MSRP_min': 20001, 'MSRP_max': 22000, 'GRG': 16, 'DRG': 16, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$22001 - $24000', 'MSRP_min': 22001, 'MSRP_max': 24000, 'GRG': 17, 'DRG': 17, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$24001 - $26000', 'MSRP_min': 24001, 'MSRP_max': 26000, 'GRG': 18, 'DRG': 18, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$26001 - $28000', 'MSRP_min': 26001, 'MSRP_max': 28000, 'GRG': 19, 'DRG': 19, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$28001 - $30000', 'MSRP_min': 28001, 'MSRP_max': 30000, 'GRG': 20, 'DRG': 20, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$30001 - $33000', 'MSRP_min': 30001, 'MSRP_max': 33000, 'GRG': 21, 'DRG': 21, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$33001 - $36000', 'MSRP_min': 33001, 'MSRP_max': 36000, 'GRG': 22, 'DRG': 22, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$36001 - $40000', 'MSRP_min': 36001, 'MSRP_max': 40000, 'GRG': 23, 'DRG': 23, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$40001 - $45000', 'MSRP_min': 40001, 'MSRP_max': 45000, 'GRG': 24, 'DRG': 24, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$45001 - $50000', 'MSRP_min': 45001, 'MSRP_max': 50000, 'GRG': 25, 'DRG': 25, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$50001 - $55000', 'MSRP_min': 50001, 'MSRP_max': 55000, 'GRG': 26, 'DRG': 26, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$55001 - $60000', 'MSRP_min': 55001, 'MSRP_max': 60000, 'GRG': 27, 'DRG': 27, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$60001 - $65000', 'MSRP_min': 60001, 'MSRP_max': 65000, 'GRG': 28, 'DRG': 28, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$65001 - $70000', 'MSRP_min': 65001, 'MSRP_max': 70000, 'GRG': 29, 'DRG': 29, 'VSD': 'C', 'LRG': 5},
+            {'MSRP_range': '$70001 - $75000', 'MSRP_min': 70001, 'MSRP_max': 75000, 'GRG': 30, 'DRG': 30, 'VSD': 'C', 'LRG': 5}
+        ]
+        return pd.DataFrame(data)
 
     def load_fallback_vehicle_rating_groups(self) -> pd.DataFrame:
         """Loads fallback vehicle rating groups (alias for load_fallback_vehicle_ratings)."""
