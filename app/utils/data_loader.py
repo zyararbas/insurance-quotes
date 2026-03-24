@@ -426,7 +426,14 @@ class DataLoader:
 
     def load_inexperienced_driver_education_discount(self) -> pd.DataFrame:
         """Loads inexperienced driver safety education discount factors."""
-        df = self.load_table('discounts/inexperienced_driver_safety_education_discount - Sheet1.csv')
+        data = [
+            {'coverage': 'BIPD', 'discount_factor': 0.981},
+            {'coverage': 'COLL', 'discount_factor': 0.979},
+            {'coverage': 'COMP', 'discount_factor': 0.967},
+            {'coverage': 'MPC', 'discount_factor': 0.819},
+            {'coverage': 'UM', 'discount_factor': 0.899}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('coverage')
 
     def load_mature_driver_course_discount(self) -> pd.DataFrame:
