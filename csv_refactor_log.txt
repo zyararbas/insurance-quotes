@@ -1,3 +1,4 @@
 # CSV Refactor Log
 Removed fallback_vehicle_rating_groups - Sheet1.csv and converted to static array in data_loader.py
 Removed model_year_factors - Sheet1.csv and converted to static array in data_loader.py
+Removed annual_mileage_factor - Sheet1.csv and converted to static array in data_loader.py

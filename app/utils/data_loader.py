@@ -157,9 +157,36 @@ class DataLoader:
 
     def load_mileage_factors(self) -> pd.DataFrame:
         """Loads annual mileage factors."""
-        df = self.load_table('car_factors/annual_mileage_factor - Sheet1.csv')
-        # Rename columns to be more Python-friendly
-        df.rename(columns={'Lower Bound': 'lower_bound'}, inplace=True)
+        data = [
+            {'Annual Mileage': '0 - 1449', 'lower_bound': 0, 'BIPD': 0.617, 'COLL': 0.581, 'COMP': 0.652, 'MPC': 0.645, 'U': 0.667},
+            {'Annual Mileage': '1450 - 2449', 'lower_bound': 1450, 'BIPD': 0.675, 'COLL': 0.697, 'COMP': 0.662, 'MPC': 0.674, 'U': 0.691},
+            {'Annual Mileage': '2450 - 3449', 'lower_bound': 2450, 'BIPD': 0.743, 'COLL': 0.742, 'COMP': 0.7, 'MPC': 0.709, 'U': 0.733},
+            {'Annual Mileage': '3450 - 4449', 'lower_bound': 3450, 'BIPD': 0.757, 'COLL': 0.78, 'COMP': 0.748, 'MPC': 0.723, 'U': 0.775},
+            {'Annual Mileage': '4450 - 5449', 'lower_bound': 4450, 'BIPD': 0.816, 'COLL': 0.803, 'COMP': 0.767, 'MPC': 0.779, 'U': 0.795},
+            {'Annual Mileage': '5450 - 6449', 'lower_bound': 5450, 'BIPD': 0.859, 'COLL': 0.852, 'COMP': 0.815, 'MPC': 0.783, 'U': 0.815},
+            {'Annual Mileage': '6450 - 7449', 'lower_bound': 6450, 'BIPD': 0.898, 'COLL': 0.91, 'COMP': 0.853, 'MPC': 0.83, 'U': 0.892},
+            {'Annual Mileage': '7450 - 8449', 'lower_bound': 7450, 'BIPD': 0.941, 'COLL': 0.951, 'COMP': 0.89, 'MPC': 0.913, 'U': 0.92},
+            {'Annual Mileage': '8450 - 9449', 'lower_bound': 8450, 'BIPD': 0.957, 'COLL': 0.969, 'COMP': 0.92, 'MPC': 0.982, 'U': 0.989},
+            {'Annual Mileage': '9450 - 10449', 'lower_bound': 9450, 'BIPD': 0.976, 'COLL': 0.996, 'COMP': 0.94, 'MPC': 0.989, 'U': 0.996},
+            {'Annual Mileage': '10450 - 11449', 'lower_bound': 10450, 'BIPD': 1.0, 'COLL': 1.0, 'COMP': 1.0, 'MPC': 1.0, 'U': 1.0},
+            {'Annual Mileage': '11450 - 12449', 'lower_bound': 11450, 'BIPD': 1.002, 'COLL': 1.002, 'COMP': 1.007, 'MPC': 1.014, 'U': 1.011},
+            {'Annual Mileage': '12450 - 13449', 'lower_bound': 12450, 'BIPD': 1.006, 'COLL': 1.004, 'COMP': 1.034, 'MPC': 1.021, 'U': 1.026},
+            {'Annual Mileage': '13450 - 14449', 'lower_bound': 13450, 'BIPD': 1.009, 'COLL': 1.01, 'COMP': 1.045, 'MPC': 1.028, 'U': 1.049},
+            {'Annual Mileage': '14450 - 15449', 'lower_bound': 14450, 'BIPD': 1.028, 'COLL': 1.021, 'COMP': 1.069, 'MPC': 1.035, 'U': 1.062},
+            {'Annual Mileage': '15450 - 16449', 'lower_bound': 15450, 'BIPD': 1.047, 'COLL': 1.029, 'COMP': 1.074, 'MPC': 1.043, 'U': 1.07},
+            {'Annual Mileage': '16450 - 17449', 'lower_bound': 16450, 'BIPD': 1.069, 'COLL': 1.054, 'COMP': 1.091, 'MPC': 1.05, 'U': 1.077},
+            {'Annual Mileage': '17450 - 18449', 'lower_bound': 17450, 'BIPD': 1.112, 'COLL': 1.058, 'COMP': 1.099, 'MPC': 1.057, 'U': 1.087},
+            {'Annual Mileage': '18450 - 19449', 'lower_bound': 18450, 'BIPD': 1.122, 'COLL': 1.077, 'COMP': 1.155, 'MPC': 1.071, 'U': 1.096},
+            {'Annual Mileage': '19450 - 20449', 'lower_bound': 19450, 'BIPD': 1.155, 'COLL': 1.104, 'COMP': 1.199, 'MPC': 1.092, 'U': 1.099},
+            {'Annual Mileage': '20450 - 21449', 'lower_bound': 20450, 'BIPD': 1.168, 'COLL': 1.114, 'COMP': 1.208, 'MPC': 1.106, 'U': 1.103},
+            {'Annual Mileage': '21450 - 23949', 'lower_bound': 21450, 'BIPD': 1.178, 'COLL': 1.124, 'COMP': 1.218, 'MPC': 1.121, 'U': 1.151},
+            {'Annual Mileage': '23950 - 26449', 'lower_bound': 23950, 'BIPD': 1.187, 'COLL': 1.16, 'COMP': 1.285, 'MPC': 1.135, 'U': 1.166},
+            {'Annual Mileage': '26450 - 28949', 'lower_bound': 26450, 'BIPD': 1.194, 'COLL': 1.206, 'COMP': 1.323, 'MPC': 1.149, 'U': 1.18},
+            {'Annual Mileage': '28950 - 31449', 'lower_bound': 28950, 'BIPD': 1.215, 'COLL': 1.234, 'COMP': 1.333, 'MPC': 1.156, 'U': 1.195},
+            {'Annual Mileage': '31450 - 33949', 'lower_bound': 31450, 'BIPD': 1.263, 'COLL': 1.271, 'COMP': 1.342, 'MPC': 1.16, 'U': 1.21},
+            {'Annual Mileage': '33950+', 'lower_bound': 33950, 'BIPD': 1.355, 'COLL': 1.322, 'COMP': 1.362, 'MPC': 1.184, 'U': 1.224}
+        ]
+        df = pd.DataFrame(data)
         return df
 
     def load_usage_type_factors(self) -> pd.DataFrame:
@@ -172,10 +199,8 @@ class DataLoader:
         return self.load_table('car_factors/single_auto_factor - Sheet1.csv')
 
     def load_annual_mileage_factors(self) -> pd.DataFrame:
-        """Loads annual mileage factors."""
-        df = self.load_table('car_factors/annual_mileage_factor - Sheet1.csv')
-        df.rename(columns={'Lower Bound': 'lower_bound'}, inplace=True)
-        return df
+        """Loads annual mileage factors (alias)."""
+        return self.load_mileage_factors()
 
     def load_base_driver_factors(self) -> pd.DataFrame:
         """Loads State Farm specific base driver factors."""
