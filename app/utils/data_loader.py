@@ -296,8 +296,16 @@ class DataLoader:
 
     def load_um_limits(self) -> pd.DataFrame:
         """Loads uninsured motorist limits and factors."""
-        df = self.load_table('coverage_factors/um_limits - Sheet1.csv')
-        return df
+        data = [
+            {'limits': '30/60', 'factor': 1.31},
+            {'limits': '50/100', 'factor': 1.65},
+            {'limits': '100/200', 'factor': 2.2},
+            {'limits': '100/300', 'factor': 2.36},
+            {'limits': '250/500', 'factor': 3.68},
+            {'limits': '500/1000', 'factor': 4.62},
+            {'limits': '1000/1000', 'factor': 5.0}
+        ]
+        return pd.DataFrame(data)
 
     def load_mpc_limits(self) -> pd.DataFrame:
         """Loads medical payments coverage limits and factors."""
