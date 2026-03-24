@@ -309,8 +309,18 @@ class DataLoader:
 
     def load_mpc_limits(self) -> pd.DataFrame:
         """Loads medical payments coverage limits and factors."""
-        df = self.load_table('coverage_factors/mpc_coverage_limits - Sheet1.csv')
-        return df
+        data = [
+            {'limit': 500, 'factor': 0.34},
+            {'limit': 1000, 'factor': 0.53},
+            {'limit': 2000, 'factor': 0.76},
+            {'limit': 3000, 'factor': 0.86},
+            {'limit': 5000, 'factor': 1.0},
+            {'limit': 10000, 'factor': 1.4},
+            {'limit': 25000, 'factor': 2.1},
+            {'limit': 50000, 'factor': 2.94},
+            {'limit': 100000, 'factor': 3.78}
+        ]
+        return pd.DataFrame(data)
 
     def load_drg_deductible_factors(self) -> pd.DataFrame:
         """Loads collision deductible factors by DRG."""
