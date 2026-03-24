@@ -19,3 +19,4 @@ Removed car_safety_rating_discount - Sheet1.csv and converted to static array in
 Removed good_driver_discount - Sheet1.csv and converted to static array in data_loader.py
 Removed good_student_discount - Sheet1.csv and converted to static array in data_loader.py (fixed typo)Removed inexperienced_driver_safety_education_discount - Sheet1.csv and converted to static array in data_loader.py
 Removed mature_driver_improvement_course_discount - Sheet1.csv and converted to static array in data_loader.py
+Removed mulitple_line_discount - Sheet1.csv and converted to static array in data_loader.py

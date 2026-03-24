@@ -447,10 +447,14 @@ class DataLoader:
 
     def load_multi_line_discount(self) -> pd.DataFrame:
         """Loads multiple line discount factors."""
-        # Use standard CSV loading since policy names are now quoted
-        df = self.load_table('discounts/mulitple_line_discount - Sheet1.csv')
-        # Convert lookup_value to string for consistent indexing
-        df['lookup_value'] = df['lookup_value'].astype(str)
+        data = [
+            {'additional_policies': "Life or Health Insurance", 'discount': 0.04, 'lookup_value': '1'},
+            {'additional_policies': "Manufactured Home or Renter's Policy", 'discount': 0.09, 'lookup_value': '2'},
+            {'additional_policies': "Manufactured Home/Renter's Policy + Personal Umbrella", 'discount': 0.16, 'lookup_value': '3'},
+            {'additional_policies': "Condo, Homeowners, or Farm/Ranch Policy", 'discount': 0.21, 'lookup_value': '4'},
+            {'additional_policies': "Condo/Homeowners/Farm-Ranch Policy + Personal Umbrella", 'discount': 0.28, 'lookup_value': '5'}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('lookup_value')
 
     def load_loyalty_discount_factors(self) -> pd.DataFrame:
