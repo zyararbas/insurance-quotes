@@ -419,7 +419,7 @@ class DataLoader:
         """Loads good student discount factors."""
         data = [
             {'eligible': 'yes', 'discount': '20%'},
-            {'eligible': 'ne', 'discount': '0'}
+            {'eligible': 'no', 'discount': '0'}
         ]
         df = pd.DataFrame(data)
         return df.set_index('eligible')
