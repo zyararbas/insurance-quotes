@@ -12,3 +12,4 @@ Removed drg_deductible_factors - Sheet1.csv and converted to static array in dat
 Removed grg_deductible - Sheet1.csv and converted to static array in data_loader.py
 Removed lrg_code_factors - Sheet1.csv and converted to static array in data_loader.py
 Removed federal_employee - Sheet1.csv and converted to static array in data_loader.py
+Removed rental_car_limits - Sheet1.csv and converted to static array in data_loader.py
