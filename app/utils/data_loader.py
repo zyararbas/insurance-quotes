@@ -191,7 +191,12 @@ class DataLoader:
 
     def load_usage_type_factors(self) -> pd.DataFrame:
         """Loads usage type factors."""
-        df = self.load_table('car_factors/auto_usage_type - Sheet1.csv')
+        data = [
+            {'automobile_use': 'Farm', 'usage_type_code': 3, 'bipd_factor': 0.865, 'coll_factor': 0.848, 'comp_factor': 0.86, 'mpc_factor': 0.907, 'um_factor': 1.056},
+            {'automobile_use': 'Pleasure / Work / School', 'usage_type_code': 1, 'bipd_factor': 1.0, 'coll_factor': 1.0, 'comp_factor': 1.0, 'mpc_factor': 1.0, 'um_factor': 1.0},
+            {'automobile_use': 'Business', 'usage_type_code': 2, 'bipd_factor': 1.257, 'coll_factor': 0.918, 'comp_factor': 0.936, 'mpc_factor': 0.917, 'um_factor': 0.975}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('automobile_use')
 
     def load_single_auto_factors(self) -> pd.DataFrame:
