@@ -22,3 +22,4 @@ Removed mature_driver_improvement_course_discount - Sheet1.csv and converted to 
 Removed mulitple_line_discount - Sheet1.csv and converted to static array in data_loader.py
 Removed loyalty_discount_by_year_coverage - Sheet1.csv and converted to static array in data_loader.py
 Removed student_away_at_school_discount - Sheet1.csv and converted to static array in data_loader.py
+Removed auto_ratings_2024_2001.csv and offloaded to PyMongo. IMPORTANT: Create a collection named 'vehicle-rates' in MongoDB to host this data.
