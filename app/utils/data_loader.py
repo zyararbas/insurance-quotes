@@ -459,8 +459,14 @@ class DataLoader:
 
     def load_loyalty_discount_factors(self) -> pd.DataFrame:
         """Loads loyalty discount factors by year and coverage."""
-        df = self.load_table('discounts/loyalty_discount_by_year_coverage - Sheet1.csv')
-        return df
+        data = [
+            {'tenure_years': 'Less than 3 years', 'bipd_factor': 0.0, 'coll_factor': 0.0, 'comp_factor': 0.0, 'mpc_factor': 0.0, 'um_factor': 0.0},
+            {'tenure_years': '3 Years', 'bipd_factor': 0.11, 'coll_factor': 0.1, 'comp_factor': 0.08, 'mpc_factor': 0.04, 'um_factor': 0.09},
+            {'tenure_years': '4 Years', 'bipd_factor': 0.15, 'coll_factor': 0.12, 'comp_factor': 0.12, 'mpc_factor': 0.12, 'um_factor': 0.12},
+            {'tenure_years': '5 Years', 'bipd_factor': 0.17, 'coll_factor': 0.17, 'comp_factor': 0.21, 'mpc_factor': 0.17, 'um_factor': 0.15},
+            {'tenure_years': '6 Years', 'bipd_factor': 0.24, 'coll_factor': 0.25, 'comp_factor': 0.29, 'mpc_factor': 0.33, 'um_factor': 0.29}
+        ]
+        return pd.DataFrame(data)
 
     def load_student_away_discount(self) -> pd.DataFrame:
         """Loads student away at school discount factors."""
@@ -469,7 +475,7 @@ class DataLoader:
 
     def load_loyalty_discount(self) -> pd.DataFrame:
         """Loads loyalty discount by years of coverage."""
-        df = self.load_table('discounts/loyalty_discount_by_year_coverage - Sheet1.csv')
+        df = self.load_loyalty_discount_factors()
         return df.set_index('tenure_years')
 
     def load_car_safety_rating_discount(self) -> pd.DataFrame:
