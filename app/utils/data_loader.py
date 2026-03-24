@@ -126,7 +126,33 @@ class DataLoader:
         
     def load_model_year_factors(self) -> pd.DataFrame:
         """Loads model year factors."""
-        df = self.load_table('car_factors/model_year_factors - Sheet1.csv')
+        data = [
+            {'min_year': 1999, 'bipd_factor': 1, 'coll_factor': 0.46, 'comp_factor': 0.58, 'mpc_factor': 1},
+            {'min_year': 2000, 'bipd_factor': 1, 'coll_factor': 0.46, 'comp_factor': 0.58, 'mpc_factor': 1},
+            {'min_year': 2001, 'bipd_factor': 1, 'coll_factor': 0.46, 'comp_factor': 0.58, 'mpc_factor': 1},
+            {'min_year': 2002, 'bipd_factor': 1, 'coll_factor': 0.46, 'comp_factor': 0.58, 'mpc_factor': 1},
+            {'min_year': 2003, 'bipd_factor': 1, 'coll_factor': 0.47, 'comp_factor': 0.6, 'mpc_factor': 1},
+            {'min_year': 2004, 'bipd_factor': 1, 'coll_factor': 0.48, 'comp_factor': 0.62, 'mpc_factor': 1},
+            {'min_year': 2005, 'bipd_factor': 1, 'coll_factor': 0.5, 'comp_factor': 0.64, 'mpc_factor': 1},
+            {'min_year': 2006, 'bipd_factor': 1, 'coll_factor': 0.53, 'comp_factor': 0.67, 'mpc_factor': 1},
+            {'min_year': 2007, 'bipd_factor': 1, 'coll_factor': 0.56, 'comp_factor': 0.7, 'mpc_factor': 1},
+            {'min_year': 2008, 'bipd_factor': 1, 'coll_factor': 0.6, 'comp_factor': 0.72, 'mpc_factor': 1},
+            {'min_year': 2009, 'bipd_factor': 1, 'coll_factor': 0.64, 'comp_factor': 0.77, 'mpc_factor': 1},
+            {'min_year': 2010, 'bipd_factor': 1, 'coll_factor': 0.68, 'comp_factor': 0.79, 'mpc_factor': 1},
+            {'min_year': 2011, 'bipd_factor': 1, 'coll_factor': 0.72, 'comp_factor': 0.82, 'mpc_factor': 1},
+            {'min_year': 2012, 'bipd_factor': 1, 'coll_factor': 0.76, 'comp_factor': 0.84, 'mpc_factor': 1},
+            {'min_year': 2013, 'bipd_factor': 1, 'coll_factor': 0.8, 'comp_factor': 0.85, 'mpc_factor': 1},
+            {'min_year': 2014, 'bipd_factor': 1, 'coll_factor': 0.84, 'comp_factor': 0.91, 'mpc_factor': 1},
+            {'min_year': 2015, 'bipd_factor': 1, 'coll_factor': 0.88, 'comp_factor': 0.93, 'mpc_factor': 1},
+            {'min_year': 2016, 'bipd_factor': 1, 'coll_factor': 0.92, 'comp_factor': 0.95, 'mpc_factor': 1},
+            {'min_year': 2017, 'bipd_factor': 1, 'coll_factor': 0.96, 'comp_factor': 0.97, 'mpc_factor': 1},
+            {'min_year': 2018, 'bipd_factor': 1, 'coll_factor': 1, 'comp_factor': 1, 'mpc_factor': 1},
+            {'min_year': 2019, 'bipd_factor': 1, 'coll_factor': 1.05, 'comp_factor': 1.03, 'mpc_factor': 1},
+            {'min_year': 2020, 'bipd_factor': 1, 'coll_factor': 1.1, 'comp_factor': 1.06, 'mpc_factor': 1},
+            {'min_year': 2021, 'bipd_factor': 1, 'coll_factor': 1.16, 'comp_factor': 1.09, 'mpc_factor': 1},
+            {'min_year': 2022, 'bipd_factor': 1, 'coll_factor': 1.22, 'comp_factor': 1.12, 'mpc_factor': 1}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('min_year')
 
     def load_mileage_factors(self) -> pd.DataFrame:
