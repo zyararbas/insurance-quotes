@@ -14,3 +14,4 @@ Removed lrg_code_factors - Sheet1.csv and converted to static array in data_load
 Removed federal_employee - Sheet1.csv and converted to static array in data_loader.py
 Removed rental_car_limits - Sheet1.csv and converted to static array in data_loader.py
 Removed transporation_network_company - Sheet1.csv and converted to static array in data_loader.py
+Removed transportation of friends_or_occupation - Sheet1.csv and converted to static array in data_loader.py

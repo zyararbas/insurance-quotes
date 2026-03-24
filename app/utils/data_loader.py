@@ -483,8 +483,11 @@ class DataLoader:
 
     def load_transportation_friends_factors(self) -> pd.DataFrame:
         """Loads transportation of friends/occupation factors."""
-        df = self.load_table('coverage_factors/transportation of friends_or_occupation - Sheet1.csv')
-        return df
+        data = [
+            {'eligbile': 'Yes', 'factor': 1.2},
+            {'eligbile': 'No', 'factor': 1.0}
+        ]
+        return pd.DataFrame(data)
 
     def load_federal_employee_factors(self) -> pd.DataFrame:
         """Loads federal employee discount factors."""
