@@ -451,7 +451,14 @@ class DataLoader:
 
     def load_car_safety_rating_discount(self) -> pd.DataFrame:
         """Loads car safety rating discount factors."""
-        df = self.load_table('discounts/car_safety_rating_discount - Sheet1.csv')
+        data = [
+            {'Safety Code': 'A', 'discount': 0.39},
+            {'Safety Code': 'B', 'discount': 0.3},
+            {'Safety Code': 'C', 'discount': 0.16},
+            {'Safety Code': 'D', 'discount': 0.08},
+            {'Safety Code': 'E', 'discount': 0.0}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('Safety Code')
 
     def load_lrg_code_factors(self) -> pd.DataFrame:
