@@ -8,3 +8,4 @@ Removed bi_limits - Sheet1.csv and converted to static array in data_loader.py
 Removed pd_limits - Sheet1.csv and converted to static array in data_loader.py
 Removed um_limits - Sheet1.csv and converted to static array in data_loader.py
 Removed mpc_coverage_limits - Sheet1.csv and converted to static array in data_loader.py
+Removed drg_deductible_factors - Sheet1.csv and converted to static array in data_loader.py
