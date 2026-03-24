@@ -278,8 +278,21 @@ class DataLoader:
 
     def load_pd_limits(self) -> pd.DataFrame:
         """Loads property damage limits and factors."""
-        df = self.load_table('coverage_factors/pd_limits - Sheet1.csv')
-        return df
+        data = [
+            {'limit': 15, 'factor': -0.03},
+            {'limit': 20, 'factor': -0.01},
+            {'limit': 25, 'factor': 0.0},
+            {'limit': 50, 'factor': 0.05},
+            {'limit': 100, 'factor': 0.07},
+            {'limit': 150, 'factor': 0.08},
+            {'limit': 200, 'factor': 0.1},
+            {'limit': 250, 'factor': 0.11},
+            {'limit': 300, 'factor': 0.13},
+            {'limit': 500, 'factor': 0.16},
+            {'limit': 750, 'factor': 0.2},
+            {'limit': 1000, 'factor': 0.22}
+        ]
+        return pd.DataFrame(data)
 
     def load_um_limits(self) -> pd.DataFrame:
         """Loads uninsured motorist limits and factors."""
