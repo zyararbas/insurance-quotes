@@ -11,3 +11,4 @@ Removed mpc_coverage_limits - Sheet1.csv and converted to static array in data_l
 Removed drg_deductible_factors - Sheet1.csv and converted to static array in data_loader.py
 Removed grg_deductible - Sheet1.csv and converted to static array in data_loader.py
 Removed lrg_code_factors - Sheet1.csv and converted to static array in data_loader.py
+Removed federal_employee - Sheet1.csv and converted to static array in data_loader.py

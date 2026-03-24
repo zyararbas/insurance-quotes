@@ -482,8 +482,11 @@ class DataLoader:
 
     def load_federal_employee_factors(self) -> pd.DataFrame:
         """Loads federal employee discount factors."""
-        df = self.load_table('coverage_factors/federal_employee - Sheet1.csv')
-        return df
+        data = [
+            {'eligible': 'Yes', 'factor': 0.7},
+            {'eligible': 'No', 'factor': 1.0}
+        ]
+        return pd.DataFrame(data)
 
     def _create_vehicle_key(self, year, make, model, series='', package_='', style='', engine='') -> str:
         """Creates a standardized vehicle key for lookups."""
