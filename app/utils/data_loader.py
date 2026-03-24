@@ -438,7 +438,11 @@ class DataLoader:
 
     def load_mature_driver_course_discount(self) -> pd.DataFrame:
         """Loads mature driver improvement course discount factors."""
-        df = self.load_table('discounts/mature_driver_improvement_course_discount - Sheet1.csv')
+        data = [
+            {'eligible': 'yes', 'factor': 0.02},
+            {'eligible': 'no', 'factor': 0.0}
+        ]
+        df = pd.DataFrame(data)
         return df.set_index('eligible')
 
     def load_multi_line_discount(self) -> pd.DataFrame:
