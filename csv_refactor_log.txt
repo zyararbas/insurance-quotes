@@ -16,3 +16,4 @@ Removed rental_car_limits - Sheet1.csv and converted to static array in data_loa
 Removed transporation_network_company - Sheet1.csv and converted to static array in data_loader.py
 Removed transportation of friends_or_occupation - Sheet1.csv and converted to static array in data_loader.py
 Removed car_safety_rating_discount - Sheet1.csv and converted to static array in data_loader.py
+Removed good_driver_discount - Sheet1.csv and converted to static array in data_loader.py
