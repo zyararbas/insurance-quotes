@@ -37,11 +37,22 @@ a. ### Building
 cd project_root
 docker build -t insurance-quotes .
 
-aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin  889572107296.dkr.ecr.us-west-1.amazonaws.com
+
 
 docker buildx build --no-cache --platform linux/amd64 -t insurance-quotes .
+West
+aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin  889572107296.dkr.ecr.us-west-1.amazonaws.com
+
 docker tag insurance-quotes:latest 889572107296.dkr.ecr.us-west-1.amazonaws.com/insurance-quotes-app:latest
+
 docker push 889572107296.dkr.ecr.us-west-1.amazonaws.com/insurance-quotes-app:latest
+East
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin  889572107296.dkr.ecr.us-east-1.amazonaws.com
+docker tag insurance-quotes:latest 889572107296.dkr.ecr.us-east-1.amazonaws.com/insurance-quotes-app:latest   
+
+docker push 889572107296.dkr.ecr.us-east-1.amazonaws.com/insurance-quotes-app:latest
+
+
 
 b. ### Launching
 docker run -p 8002:8002 --network coveragecompassnetwork  --env-file .env insurance-quotes

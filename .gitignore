@@ -10,6 +10,7 @@ vehicle_rates_csv/
 vehicle_rates_rag/
 vehicle_rates_rag_csv/  
 vehicle_rates_chroma_db/
+*.zip
 .vscode/
 
 # C extensions
