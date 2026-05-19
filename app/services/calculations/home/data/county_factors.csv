@@ -1,0 +1,59 @@
+county,factor,risk_tier,notes
+ALAMEDA,1.0497,medium,Urban/suburban; moderate wildfire exposure in hills
+ALPINE,1.3481,low,Sparse rural; minimal loss history
+AMADOR,1.3182,medium-high,Foothill wildfire zone; WUI exposure
+BUTTE,1.1359,very-high,Camp Fire (2018) county; Paradise rebuild zone; extreme wildfire risk
+CALAVERAS,1.3221,high,Foothill WUI; multiple fire events
+COLUSA,1.1154,low-medium,Rural agricultural; low CAT exposure
+CONTRA COSTA,0.9844,medium,Suburban; some East Bay hills fire risk
+DEL NORTE,1.0499,low-medium,Coastal; low wildfire; minor flood risk
+EL DORADO,1.2747,high,Caldor Fire (2021); high Tahoe/foothill WUI exposure
+FRESNO,1.0507,medium,Central Valley; some foothills wildfire exposure
+GLENN,1.1778,low-medium,Rural agricultural; low loss history
+HUMBOLDT,0.9754,low-medium,Coastal/rural; low wildfire; some landslide risk
+IMPERIAL,1.2407,low-medium,Desert; low wildfire; some flood risk
+INYO,1.2674,low,Remote desert; very low exposure
+KERN,1.0979,medium,Diverse terrain; oil corridor; some wildfire east/west
+KINGS,1.025,low-medium,Agricultural Central Valley; low CAT
+LAKE,1.2285,very-high,Valley Fire (2015); Clear Lake watershed; extreme wildfire
+LASSEN,1.3021,low,Remote high-desert; very low loss
+LOS ANGELES,1.2852,high,Woolsey/Palisades fires; coastal high values; dense urban
+MADERA,1.1086,medium-high,Sierra foothills; Creek Fire (2020) area
+MARIN,1.0143,high,High property values; coastal exposure; wildfire (Mt Tam area)
+MARIPOSA,1.3181,high,Yosemite foothills; Oak Fire (2022) epicenter
+MENDOCINO,1.0864,medium-high,Multiple fires (2017-2020); coastal/rural WUI
+MERCED,1.0094,medium,Central Valley; low CAT exposure
+MODOC,1.2663,low,Remote; minimal loss history
+MONO,1.253,low,Eastern Sierra; remote; low population density
+MONTEREY,0.9525,medium,Coastal high values; some inland fire risk
+NAPA,0.9728,medium-high,Atlas/Nuns fires (2017); wine country high values
+NEVADA,1.2521,high,Caldor/Bear fires; high-value Tahoe foothills
+ORANGE,1.1713,medium-high,Coastal high values; wildfire (Irvine/Silverado areas)
+PLACER,0.9918,high,High-value areas; fire risk (Mosquito Fire 2022)
+PLUMAS,1.3089,low-medium,Rural; some wildfire but low density
+RIVERSIDE,1.2789,medium-high,Desert/foothill interface; wildfire and wind (Santa Ana)
+SACRAMENTO,0.9994,medium,Urban/suburban; low direct fire risk; some flooding
+SAN BENITO,1.026,medium,Rural; low CAT exposure
+SAN BERNARDINO,1.2524,medium-high,Vast county; desert/mountain WUI; wind events
+SAN DIEGO,1.1096,medium-high,Cedar/Harris fires history; coastal high values; dry terrain
+SAN FRANCISCO,1.1549,medium-high,Very high property values; earthquake-adjacent risk
+SAN JOAQUIN,1.0285,medium,Central Valley urban; moderate exposure
+SAN LUIS OBISPO,0.9382,medium,Coastal/inland mix; some fire risk
+SAN MATEO,0.919,medium-high,High coastal values; hillside exposure
+SANTA BARBARA,0.9429,medium-high,Thomas Fire (2017); Montecito mudslide post-fire exposure
+SANTA CLARA,0.8877,medium,High tech-corridor values; some east hills fire risk
+SANTA CRUZ,1.0119,medium,CZU Fire (2020); coastal
+SHASTA,1.247,medium,Carr Fire (2018); forested terrain
+SIERRA,1.3201,low,Very rural; minimal exposure
+SISKIYOU,1.251,low-medium,Rural; some fire events; low density
+SOLANO,1.0133,medium,Suburban corridor; low direct fire risk
+SONOMA,0.9016,high,Tubbs/Kincade/Walbridge fires; wine country high values
+STANISLAUS,0.9721,medium,Central Valley agricultural; low CAT
+SUTTER,1.0765,low-medium,Rural ag; minor flood risk
+TEHAMA,1.2466,low-medium,Rural; some wildfire but low density
+TRINITY,1.3371,low-medium,Remote; low density; some wildfire
+TULARE,1.0167,medium,Central Valley/foothills; some fire exposure east
+TUOLUMNE,1.2939,high,Rim Fire (2013); active WUI foothill zone
+VENTURA,1.0031,high,Thomas/Easy fires; coastal/inland interface; Santa Ana winds
+YOLO,0.9713,medium,UC Davis corridor; low CAT exposure
+YUBA,1.1719,low-medium,Foothill rural; low loss history

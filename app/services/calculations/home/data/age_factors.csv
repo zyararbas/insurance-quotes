@@ -1,0 +1,8 @@
+age_of_home,factor,applies_to,notes
+New,1.0,HOMEOWNERS|MOBILEHOME,New construction baseline — CDI 2025 market anchor
+3 Years,1.1412,HOMEOWNERS|MOBILEHOME,+14% vs new; early wear begins — CDI avg $1063 vs $931
+6 Years,1.298,HOMEOWNERS|MOBILEHOME,+30% vs new; systems aging — CDI avg $1209
+15 Years,1.6522,HOMEOWNERS|MOBILEHOME,+65% vs new; peak mid-life risk; roof/HVAC/plumbing exposure — CDI avg $1539
+25 Years,1.8019,HOMEOWNERS|MOBILEHOME,+80% vs new; major systems near end-of-life — CDI avg $1678
+40 Years,1.8191,HOMEOWNERS|MOBILEHOME,+82% vs new; PEAK market rate tier — CDI avg $1694
+70 Years,1.7889,HOMEOWNERS|MOBILEHOME,+79% vs new; SLIGHTLY below 40yr peak due to survivor bias (renovated homes only remain insurable) — CDI avg $1666

@@ -1,16 +1,20 @@
 from typing import Any, Dict, Optional, List
 import time
+from datetime import date
 
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.models import ComprehensiveVehicleSearchRequest, RatingInput  # type: ignore
 from app.services.calculations.pricing_orchestrator import PricingOrchestrator
 from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 from app.services.vehicle_search.vehicle_spec_orchestrator import VehicleSpecOrchestrator
-from app.routes.adapter_service import AdapterService 
+from app.routes.adapter_service import AdapterService
+from app.services.calculations.home.home_insurance import calculate_home_insurance
+from app.services.calculations.home.cdi_lookup import CDILookupService
+from app.services.calculations.home.cdi_location import resolve_zip_info
 import logging
 
 logger = logging.getLogger(__name__)
@@ -151,3 +155,204 @@ async def create_quote(payload: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=f"An internal error occurred during transformation: {e}")
 
 
+# ---------------------------------------------------------------------------
+# Home Insurance Quote endpoint
+# ---------------------------------------------------------------------------
+
+_CDI_VALID_AMOUNTS = {
+    "HOMEOWNERS":              [250000, 375000, 500000, 625000, 750000, 1000000],
+    "CONDOMINIUM":             [25000, 50000, 75000, 100000],
+    "RENTERS":                 [15000, 25000, 30000, 50000, 70000],
+    "MOBILEHOME":              [50000, 100000],
+    "EARTHQUAKE_SINGLE_FAMILY":[250000, 375000, 500000, 625000, 750000, 1000000],
+    "EARTHQUAKE_CONDOMINIUM":  [25000, 50000, 75000, 100000],
+    "EARTHQUAKE_MOBILEHOME":   [50000, 100000],
+    "EARTHQUAKE_RENTERS":      [15000, 25000, 30000, 50000, 70000],
+}
+
+_AGE_BUCKETS = [
+    (2,  "New"),
+    (5,  "3 Years"),
+    (11, "6 Years"),
+    (21, "15 Years"),
+    (33, "25 Years"),
+    (56, "40 Years"),
+    (float("inf"), "70 Years"),
+]
+
+
+def _year_to_age_bucket(year_built: int) -> str:
+    age = date.today().year - year_built
+    for threshold, bucket in _AGE_BUCKETS:
+        if age < threshold:
+            return bucket
+    return "70 Years"
+
+
+def _nearest_cdi_amount(coverage_type: str, amount: float) -> int:
+    valid = _CDI_VALID_AMOUNTS.get(coverage_type.upper(), [])
+    if not valid:
+        return int(amount)
+    return min(valid, key=lambda v: abs(v - amount))
+
+
+_cdi_service = CDILookupService()
+
+
+class HomeQuoteRequest(BaseModel):
+    zip_code: str = Field(..., description="5-digit California ZIP code")
+    coverage_type: str = Field(..., description="HOMEOWNERS | CONDOMINIUM | MOBILEHOME | RENTERS | EARTHQUAKE_*")
+    coverage_amount: float = Field(..., description="Dollar amount of coverage, e.g. 375000")
+    deductible: int = Field(..., description="Deductible amount: 500, 1000, 2500, or 5000")
+    year_built: Optional[int] = Field(None, description="Year the home was built — used to derive CDI age bucket for HOMEOWNERS/MOBILEHOME")
+    age_of_home: Optional[str] = Field(None, description="CDI age bucket override: 'New', '3 Years', '6 Years', '15 Years', '25 Years', '40 Years', '70 Years'")
+    endorsements: Optional[List[str]] = Field(None, description="Endorsement codes to add, e.g. ['ERC_150', 'REPLACEMENT_PERSONAL_PROPERTY']")
+
+
+class MarketCompany(BaseModel):
+    company: str
+    annual_premium: int
+    monthly_premium: float
+
+
+class MarketStats(BaseModel):
+    count: int
+    minimum: int
+    maximum: int
+    mean: float
+    median: float
+    percentile_80: float
+    percentile_90: float
+    percentile_95: float
+
+
+class HomeQuoteResponse(BaseModel):
+    zip_code: str
+    county: str
+    city: str
+    cdi_location: str
+    coverage_type: str
+    coverage_amount: float
+    deductible: int
+    age_of_home: Optional[str]
+    # Factor-based estimate
+    base_annual_premium: float
+    endorsement_premium: float
+    endorsements_applied: List[dict]
+    estimated_annual_premium: float
+    estimated_monthly_premium: float
+    county_risk_tier: str
+    factors: dict
+    # CDI live market data
+    cdi_coverage_amount_used: Optional[int]
+    market_stats: Optional[MarketStats]
+    market_companies: Optional[List[MarketCompany]]
+
+
+@router.post("/home-quote", response_model=HomeQuoteResponse, tags=["Insurance Quotes"])
+async def home_insurance_quote(request: HomeQuoteRequest):
+    """
+    Calculate a California home insurance estimate and fetch live CDI market rates.
+
+    - Resolves ZIP code to county and CDI location (no external API needed).
+    - Returns a factor-based premium estimate alongside live per-company rates
+      from the CDI interactive tool with market statistics.
+    """
+    # 1. Resolve ZIP → county / CDI location
+    zip_info = resolve_zip_info(request.zip_code)
+    if not zip_info:
+        raise HTTPException(status_code=422, detail=f"ZIP code '{request.zip_code}' is not a recognized California ZIP code.")
+
+    county = zip_info["county"]
+    city = zip_info["city"]
+    cdi_location = zip_info["cdi_location"]
+
+    # 2. Resolve age bucket
+    coverage_type = request.coverage_type.upper()
+    age_of_home: Optional[str] = None
+    if coverage_type in {"HOMEOWNERS", "MOBILEHOME"}:
+        if request.age_of_home:
+            age_of_home = request.age_of_home
+        elif request.year_built:
+            age_of_home = _year_to_age_bucket(request.year_built)
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail="'year_built' or 'age_of_home' is required for HOMEOWNERS and MOBILEHOME coverage types."
+            )
+
+    # 3. Factor-based premium estimate (with endorsements)
+    try:
+        quote = calculate_home_insurance(
+            coverage_type=coverage_type,
+            county=county,
+            coverage_amount=request.coverage_amount,
+            deductible=request.deductible,
+            age_of_home=age_of_home,
+            endorsements=request.endorsements or [],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    # 4. CDI live market lookup
+    cdi_amount = _nearest_cdi_amount(coverage_type, request.coverage_amount)
+    market_stats = None
+    market_companies = None
+    try:
+        cdi_result = _cdi_service.lookup(
+            location=cdi_location,
+            coverage_type=coverage_type,
+            coverage_amount=cdi_amount,
+            home_age=age_of_home,
+        )
+        if cdi_result.stats:
+            s = cdi_result.stats
+            market_stats = MarketStats(
+                count=s.count,
+                minimum=s.minimum,
+                maximum=s.maximum,
+                mean=s.mean,
+                median=s.median,
+                percentile_80=s.percentile_80,
+                percentile_90=s.percentile_90,
+                percentile_95=s.percentile_95,
+            )
+            market_companies = [
+                MarketCompany(
+                    company=c.company,
+                    annual_premium=c.annual_premium,
+                    monthly_premium=c.monthly_premium,
+                )
+                for c in cdi_result.companies
+            ]
+    except Exception as e:
+        logger.warning(f"CDI live lookup failed for {cdi_location}: {e}")
+
+    return HomeQuoteResponse(
+        zip_code=request.zip_code,
+        county=county,
+        city=city,
+        cdi_location=cdi_location,
+        coverage_type=coverage_type,
+        coverage_amount=request.coverage_amount,
+        deductible=request.deductible,
+        age_of_home=age_of_home,
+        base_annual_premium=quote.base_annual_premium,
+        endorsement_premium=quote.endorsement_premium,
+        endorsements_applied=quote.endorsements_applied,
+        estimated_annual_premium=quote.annual_premium,
+        estimated_monthly_premium=quote.monthly_premium,
+        county_risk_tier=quote.county_risk_tier,
+        factors=quote.breakdown,
+        cdi_coverage_amount_used=cdi_amount,
+        market_stats=market_stats,
+        market_companies=market_companies,
+    )
+
+
+@router.get("/home-endorsements", tags=["Insurance Quotes"])
+def home_endorsements_catalog():
+    """Returns the full endorsements catalog with codes, descriptions, and pricing."""
+    from app.services.calculations.home.home_insurance import _calculator
+    _calculator._ensure_loaded()
+    return {"endorsements": _calculator._endorsements.reset_index().to_dict(orient="records")}

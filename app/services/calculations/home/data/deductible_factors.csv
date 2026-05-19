@@ -1,0 +1,5 @@
+deductible,factor,notes
+500,1.000,Baseline deductible
+1000,0.915,~8.5% reduction vs $500 deductible
+2500,0.810,~19% reduction vs $500 deductible
+5000,0.710,~29% reduction vs $500 deductible
