@@ -181,12 +181,16 @@ _AGE_BUCKETS = [
 ]
 
 
-def _year_to_age_bucket(year_built: int) -> str:
-    age = date.today().year - year_built
+def _age_to_bucket(age: int) -> str:
     for threshold, bucket in _AGE_BUCKETS:
         if age < threshold:
             return bucket
     return "70 Years"
+
+
+def _year_to_age_bucket(year_built: int) -> str:
+    return _age_to_bucket(date.today().year - year_built)
+
 
 
 def _nearest_cdi_amount(coverage_type: str, amount: float) -> int:
@@ -204,8 +208,7 @@ class HomeQuoteRequest(BaseModel):
     coverage_type: str = Field(..., description="HOMEOWNERS | CONDOMINIUM | MOBILEHOME | RENTERS | EARTHQUAKE_*")
     coverage_amount: float = Field(..., description="Dollar amount of coverage, e.g. 375000")
     deductible: int = Field(..., description="Deductible amount: 500, 1000, 2500, or 5000")
-    year_built: Optional[int] = Field(None, description="Year the home was built — used to derive CDI age bucket for HOMEOWNERS/MOBILEHOME")
-    age_of_home: Optional[str] = Field(None, description="CDI age bucket override: 'New', '3 Years', '6 Years', '15 Years', '25 Years', '40 Years', '70 Years'")
+    year_built: Optional[int] = Field(None, description="Year the home was built — required for HOMEOWNERS/MOBILEHOME; auto-mapped to CDI age bucket")
     endorsements: Optional[List[str]] = Field(None, description="Endorsement codes to add, e.g. ['ERC_150', 'REPLACEMENT_PERSONAL_PROPERTY']")
 
 
@@ -235,6 +238,7 @@ class HomeQuoteResponse(BaseModel):
     coverage_amount: float
     deductible: int
     age_of_home: Optional[str]
+    coverage_package: dict   # coverage_a, coverage_b, coverage_c, coverage_d
     # Factor-based estimate
     base_annual_premium: float
     endorsement_premium: float
@@ -267,19 +271,16 @@ async def home_insurance_quote(request: HomeQuoteRequest):
     city = zip_info["city"]
     cdi_location = zip_info["cdi_location"]
 
-    # 2. Resolve age bucket
+    # 2. Resolve age bucket from year_built
     coverage_type = request.coverage_type.upper()
     age_of_home: Optional[str] = None
     if coverage_type in {"HOMEOWNERS", "MOBILEHOME"}:
-        if request.age_of_home:
-            age_of_home = request.age_of_home
-        elif request.year_built:
-            age_of_home = _year_to_age_bucket(request.year_built)
-        else:
+        if not request.year_built:
             raise HTTPException(
                 status_code=422,
-                detail="'year_built' or 'age_of_home' is required for HOMEOWNERS and MOBILEHOME coverage types."
+                detail="'year_built' is required for HOMEOWNERS and MOBILEHOME coverage types."
             )
+        age_of_home = _year_to_age_bucket(request.year_built)
 
     # 3. Factor-based premium estimate (with endorsements)
     try:
@@ -337,6 +338,7 @@ async def home_insurance_quote(request: HomeQuoteRequest):
         coverage_amount=request.coverage_amount,
         deductible=request.deductible,
         age_of_home=age_of_home,
+        coverage_package=quote.coverage_package,
         base_annual_premium=quote.base_annual_premium,
         endorsement_premium=quote.endorsement_premium,
         endorsements_applied=quote.endorsements_applied,

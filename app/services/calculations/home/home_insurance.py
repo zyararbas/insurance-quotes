@@ -41,6 +41,7 @@ class HomeInsuranceQuote:
     base_annual_premium: float
     endorsement_premium: float
     endorsements_applied: List[dict]
+    coverage_package: dict   # coverage_a 
     breakdown: dict
 
 
@@ -124,8 +125,11 @@ class HomeInsuranceCalculator:
         county_factor = float(self._county_factors.loc[county, "factor"])
         county_risk_tier = str(self._county_factors.loc[county, "risk_tier"])
 
-        # Premium = (coverage / 1000) × base_rate × age × deductible × county
-        coverage_units = input.coverage_amount / 1000.0
+        # CDI coverage package — input is Coverage A (Dwelling); B/C/D derived by standard ratios
+        coverage_a = input.coverage_amount 
+
+        # Premium = (coverage_a / 1000) × base_rate × age × deductible × county
+        coverage_units = coverage_a / 1000.0
         base_annual_premium = round(
             coverage_units * base_rate_per_1k * age_factor * deductible_factor * county_factor,
             2,
@@ -157,6 +161,13 @@ class HomeInsuranceCalculator:
             rate = float(row["rate"])
             if pricing_method == "percent_of_base":
                 add_on = round(base_annual_premium * rate, 2)
+            elif pricing_method == "percent_of_coverage_c":
+                # Price on Coverage C (personal property) at the same per-$1K rate as dwelling
+                coverage_c_units = coverage_c / 1000.0
+                add_on = round(
+                    coverage_c_units * base_rate_per_1k * age_factor * deductible_factor * county_factor * rate,
+                    2,
+                )
             elif pricing_method == "flat":
                 add_on = round(rate, 2)
             else:
@@ -186,8 +197,11 @@ class HomeInsuranceCalculator:
             base_annual_premium=base_annual_premium,
             endorsement_premium=endorsement_premium,
             endorsements_applied=endorsements_applied,
+            coverage_package={
+                "coverage_a_dwelling": coverage_a
+            },
             breakdown={
-                "coverage_amount": input.coverage_amount,
+                "coverage_a": coverage_a,
                 "coverage_units": coverage_units,
                 "base_rate_per_1k": base_rate_per_1k,
                 "age_factor": age_factor,
