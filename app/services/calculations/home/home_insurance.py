@@ -255,6 +255,17 @@ def calculate_home_insurance(
     )
 
 
+def get_deductible_factor(deductible: int) -> float:
+    """Return the deductible factor for a given deductible amount (1000 = 1.000 baseline)."""
+    _calculator._ensure_loaded()
+    if deductible not in _calculator._deductible_factors.index:
+        raise ValueError(
+            f"Invalid deductible '{deductible}'. "
+            f"Valid options: {list(_calculator._deductible_factors.index)}"
+        )
+    return float(_calculator._deductible_factors.loc[deductible, "factor"])
+
+
 if __name__ == "__main__":
     examples = [
         dict(coverage_type="HOMEOWNERS", county="SANTA CLARA", coverage_amount=500_000, deductible=1000, age_of_home="15 Years"),

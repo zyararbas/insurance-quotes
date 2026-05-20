@@ -12,7 +12,7 @@ from app.services.calculations.pricing_orchestrator import PricingOrchestrator
 from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 from app.services.vehicle_search.vehicle_spec_orchestrator import VehicleSpecOrchestrator
 from app.routes.adapter_service import AdapterService
-from app.services.calculations.home.home_insurance import calculate_home_insurance
+from app.services.calculations.home.home_insurance import calculate_home_insurance, get_deductible_factor
 from app.services.calculations.home.cdi_lookup import CDILookupService
 from app.services.calculations.home.cdi_location import resolve_zip_info
 import logging
@@ -271,8 +271,9 @@ async def home_insurance_quote(request: HomeQuoteRequest):
     city = zip_info["city"]
     cdi_location = zip_info["cdi_location"]
 
-    # 2. Resolve age bucket from year_built
+    # 2. Resolve coverage type, bucket coverage amount, and age bucket
     coverage_type = request.coverage_type.upper()
+    coverage_amount = _nearest_cdi_amount(coverage_type, request.coverage_amount)
     age_of_home: Optional[str] = None
     if coverage_type in {"HOMEOWNERS", "MOBILEHOME"}:
         if not request.year_built:
@@ -287,7 +288,7 @@ async def home_insurance_quote(request: HomeQuoteRequest):
         quote = calculate_home_insurance(
             coverage_type=coverage_type,
             county=county,
-            coverage_amount=request.coverage_amount,
+            coverage_amount=coverage_amount,
             deductible=request.deductible,
             age_of_home=age_of_home,
             endorsements=request.endorsements or [],
@@ -296,33 +297,33 @@ async def home_insurance_quote(request: HomeQuoteRequest):
         raise HTTPException(status_code=422, detail=str(e))
 
     # 4. CDI live market lookup
-    cdi_amount = _nearest_cdi_amount(coverage_type, request.coverage_amount)
     market_stats = None
     market_companies = None
     try:
         cdi_result = _cdi_service.lookup(
             location=cdi_location,
             coverage_type=coverage_type,
-            coverage_amount=cdi_amount,
+            coverage_amount=coverage_amount,
             home_age=age_of_home,
         )
         if cdi_result.stats:
             s = cdi_result.stats
+            deductible_factor = get_deductible_factor(request.deductible)
             market_stats = MarketStats(
                 count=s.count,
-                minimum=s.minimum,
-                maximum=s.maximum,
-                mean=s.mean,
-                median=s.median,
-                percentile_80=s.percentile_80,
-                percentile_90=s.percentile_90,
-                percentile_95=s.percentile_95,
+                minimum=round(s.minimum * deductible_factor),
+                maximum=round(s.maximum * deductible_factor),
+                mean=round(s.mean * deductible_factor),
+                median=round(s.median * deductible_factor),
+                percentile_80=round(s.percentile_80 * deductible_factor),
+                percentile_90=round(s.percentile_90 * deductible_factor),
+                percentile_95=round(s.percentile_95 * deductible_factor),
             )
             market_companies = [
                 MarketCompany(
                     company=c.company,
-                    annual_premium=c.annual_premium,
-                    monthly_premium=c.monthly_premium,
+                    annual_premium=round(c.annual_premium * deductible_factor),
+                    monthly_premium=round(c.annual_premium * deductible_factor / 12),
                 )
                 for c in cdi_result.companies
             ]
@@ -335,7 +336,7 @@ async def home_insurance_quote(request: HomeQuoteRequest):
         city=city,
         cdi_location=cdi_location,
         coverage_type=coverage_type,
-        coverage_amount=request.coverage_amount,
+        coverage_amount=coverage_amount,
         deductible=request.deductible,
         age_of_home=age_of_home,
         coverage_package=quote.coverage_package,
@@ -346,7 +347,7 @@ async def home_insurance_quote(request: HomeQuoteRequest):
         estimated_monthly_premium=quote.monthly_premium,
         county_risk_tier=quote.county_risk_tier,
         factors=quote.breakdown,
-        cdi_coverage_amount_used=cdi_amount,
+        cdi_coverage_amount_used=coverage_amount,
         market_stats=market_stats,
         market_companies=market_companies,
     )
