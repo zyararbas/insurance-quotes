@@ -1,41 +1,16 @@
 """
 Resolves a California ZIP code to a CDI location string.
 
-Uses a bundled CSV (ca_zip_locations.csv, 2593 CA ZIP codes) — no network calls,
-no external dependencies. The CSV was generated from the GeoNames public-domain
-postal dataset pre-matched to the CDI interactive tool's location dropdown.
-
-Usage:
-    from app.services.calculations.home.cdi_location import resolve_location
-
-    resolve_location("95111")   # "SANTA CLARA SAN JOSE - 95111"
-    resolve_location("94102")   # "SAN FRANCISCO SAN FRANCISCO"
-    resolve_location("90210")   # "LOS ANGELES BEVERLY HILLS"
+Uses the home_ca_zip_locations MongoDB collection (2593 CA ZIP codes).
 """
 from __future__ import annotations
 
-import csv
-import os
 from typing import Optional
 
-_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-_CSV_PATH = os.path.join(_DATA_DIR, "ca_zip_locations.csv")
+from app.services.storage_service import StorageService
 
 # Lazy-loaded: zip -> cdi_location string
 _zip_map: dict[str, str] | None = None
-
-
-def _load() -> dict[str, str]:
-    global _zip_map
-    if _zip_map is None:
-        _zip_map = {}
-        with open(_CSV_PATH, newline="") as f:
-            for row in csv.DictReader(f):
-                if row["cdi_location"]:
-                    _zip_map[row["zip"]] = row["cdi_location"]
-    return _zip_map
-
-
 _zip_info_map: dict[str, dict] | None = None
 
 
@@ -44,15 +19,15 @@ def _load_full() -> dict[str, dict]:
     if _zip_info_map is None:
         _zip_map = {}
         _zip_info_map = {}
-        with open(_CSV_PATH, newline="") as f:
-            for row in csv.DictReader(f):
-                if row["cdi_location"]:
-                    _zip_map[row["zip"]] = row["cdi_location"]
-                    _zip_info_map[row["zip"]] = {
-                        "county": row["county"],
-                        "city": row["city"],
-                        "cdi_location": row["cdi_location"],
-                    }
+        for doc in StorageService().find({}, "home_ca_zip_locations"):
+            if doc.get("cdi_location"):
+                zip_str = str(doc["zip"]).zfill(5)
+                _zip_map[zip_str] = doc["cdi_location"]
+                _zip_info_map[zip_str] = {
+                    "county": doc["county"],
+                    "city": doc["city"],
+                    "cdi_location": doc["cdi_location"],
+                }
     return _zip_info_map
 
 
@@ -87,3 +62,6 @@ def resolve_location_strict(zip_code: str) -> str:
     if loc is None:
         raise ValueError(f"ZIP code {zip_code!r} not found in California ZIP database")
     return loc
+
+
+_load_full()

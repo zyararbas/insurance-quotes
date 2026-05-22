@@ -1,9 +1,0 @@
-coverage_type,base_rate_per_1k,description
-HOMEOWNERS,2.5853,Single family detached frame construction base rate per $1000 coverage
-CONDOMINIUM,9.4537,Condo unit owners (interior + personal property) base rate per $1000 coverage
-MOBILEHOME,5.8969,Manufactured/mobilehome base rate per $1000 coverage
-RENTERS,7.1449,Renters/tenants personal property base rate per $1000 coverage
-EARTHQUAKE_SINGLE_FAMILY,2.5,Earthquake standalone single family base rate per $1000 coverage
-EARTHQUAKE_CONDOMINIUM,1.5,Earthquake standalone condo unit base rate per $1000 coverage
-EARTHQUAKE_MOBILEHOME,3.5,Earthquake standalone mobilehome base rate per $1000 coverage
-EARTHQUAKE_RENTERS,1.0,Earthquake standalone renters base rate per $1000 coverage

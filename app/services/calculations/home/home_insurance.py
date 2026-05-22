@@ -1,9 +1,8 @@
-import os
 import pandas as pd
 from dataclasses import dataclass, field
 from typing import Optional, List
 
-_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+from app.services.storage_service import StorageService
 
 _VALID_COVERAGE_TYPES = {
     "HOMEOWNERS",
@@ -17,6 +16,67 @@ _VALID_COVERAGE_TYPES = {
 }
 
 _AGE_APPLIES_TO = {"HOMEOWNERS", "MOBILEHOME"}
+
+_DEDUCTIBLE_FACTORS: dict[int, float] = {
+    500:  1.110,   # +11% premium penalty vs $1000 baseline
+    1000: 1.000,   # Standard baseline
+    2500: 0.875,   # -12.5% discount vs $1000 baseline
+    5000: 0.725,   # -27.5% discount vs $1000 baseline
+}
+
+_BASE_RATES: dict[str, float] = {
+    "HOMEOWNERS":               2.5853,  # Single family detached frame construction
+    "CONDOMINIUM":              9.4537,  # Condo unit owners (interior + personal property)
+    "MOBILEHOME":               5.8969,  # Manufactured/mobilehome
+    "RENTERS":                  7.1449,  # Renters/tenants personal property
+    "EARTHQUAKE_SINGLE_FAMILY": 2.5,     # Earthquake standalone single family
+    "EARTHQUAKE_CONDOMINIUM":   1.5,     # Earthquake standalone condo unit
+    "EARTHQUAKE_MOBILEHOME":    3.5,     # Earthquake standalone mobilehome
+    "EARTHQUAKE_RENTERS":       1.0,     # Earthquake standalone renters
+}
+
+@dataclass(frozen=True)
+class _EndorsementDef:
+    name: str
+    pricing_method: str   # percent_of_base | percent_of_coverage_c | flat
+    rate: float
+    applies_to: str       # pipe-delimited coverage types, or "ALL"
+
+_ENDORSEMENTS: dict[str, _EndorsementDef] = {
+    "ERC_110":                    _EndorsementDef("Extended Replacement Cost 110%",               "percent_of_base",        0.01,  "HOMEOWNERS|MOBILEHOME"),
+    "ERC_125":                    _EndorsementDef("Extended Replacement Cost 125%",               "percent_of_base",        0.03,  "HOMEOWNERS|MOBILEHOME"),
+    "ERC_150":                    _EndorsementDef("Extended Replacement Cost 150%",               "percent_of_base",        0.06,  "HOMEOWNERS|MOBILEHOME"),
+    "ERC_200":                    _EndorsementDef("Extended Replacement Cost 200%",               "percent_of_base",        0.10,  "HOMEOWNERS|MOBILEHOME"),
+    "GRC":                        _EndorsementDef("Guaranteed Replacement Cost",                  "percent_of_base",        0.15,  "HOMEOWNERS|MOBILEHOME"),
+    "BUILDING_CODE_UPGRADE":      _EndorsementDef("Building Code Upgrade — Ordinance & Law",      "flat",                  66.00,  "HOMEOWNERS|MOBILEHOME"),
+    "INFLATION_GUARD_4":          _EndorsementDef("Inflation Guard 4%",                           "percent_of_base",        0.02,  "HOMEOWNERS|CONDOMINIUM|MOBILEHOME"),
+    "INFLATION_GUARD_6":          _EndorsementDef("Inflation Guard 6%",                           "percent_of_base",        0.03,  "HOMEOWNERS|CONDOMINIUM|MOBILEHOME"),
+    "REPLACEMENT_PERSONAL_PROPERTY": _EndorsementDef("Replacement Value — Personal Property",    "percent_of_coverage_c",  0.15,  "HOMEOWNERS|CONDOMINIUM|MOBILEHOME|RENTERS"),
+    "WATER_BACKUP_5K":            _EndorsementDef("Water Backup and Sump Overflow ($5K)",         "flat",                  60.00,  "HOMEOWNERS|CONDOMINIUM|MOBILEHOME"),
+    "WATER_BACKUP_25K":           _EndorsementDef("Water Backup and Sump Overflow ($25K)",        "flat",                 120.00,  "HOMEOWNERS|CONDOMINIUM|MOBILEHOME"),
+    "SERVICE_LINE":               _EndorsementDef("Service Line Coverage ($10K)",                 "flat",                  55.00,  "HOMEOWNERS|MOBILEHOME"),
+    "IDENTITY_FRAUD":             _EndorsementDef("Identity Fraud Expense ($15K)",                "flat",                  40.00,  "ALL"),
+    "PERSONAL_INJURY_LIABILITY":  _EndorsementDef("Personal Injury Liability",                    "flat",                  25.00,  "ALL"),
+    "WORKERS_COMP":               _EndorsementDef("Workers Compensation",                         "flat",                   4.00,  "ALL"),
+    "LOSS_ASSESSMENT_10K":        _EndorsementDef("Loss Assessment Coverage ($10K)",              "flat",                  25.00,  "HOMEOWNERS|CONDOMINIUM"),
+    "LOSS_ASSESSMENT_EARTHQUAKE": _EndorsementDef("Earthquake Loss Assessment",                   "flat",                  50.00,  "HOMEOWNERS|CONDOMINIUM"),
+    "EQUIPMENT_BREAKDOWN":        _EndorsementDef("Equipment Breakdown",                          "flat",                  50.00,  "HOMEOWNERS|CONDOMINIUM|MOBILEHOME"),
+    "MOLD_COVERAGE":              _EndorsementDef("Mold and Fungi Coverage",                      "flat",                  50.00,  "HOMEOWNERS|CONDOMINIUM|MOBILEHOME"),
+    "HOME_SHARING":               _EndorsementDef("Home-Sharing Host Activities",                 "flat",                 125.00,  "HOMEOWNERS"),
+    "HOME_BUSINESS":              _EndorsementDef("Home Business Insurance (Comprehensive)",      "flat",                 500.00,  "HOMEOWNERS"),
+    "GREEN_UPGRADES":             _EndorsementDef("Green and Sustainable Building Upgrades",      "percent_of_base",        0.02,  "HOMEOWNERS|MOBILEHOME"),
+    "ASSISTED_LIVING":            _EndorsementDef("Assisted Living Care Coverage",                "flat",                  35.00,  "HOMEOWNERS|CONDOMINIUM"),
+}
+
+_AGE_FACTORS: dict[str, float] = {
+    "New":      1.0,      # New construction baseline — CDI 2025 market anchor
+    "3 Years":  1.1412,   # +14% vs new; early wear begins — CDI avg $1063 vs $931
+    "6 Years":  1.298,    # +30% vs new; systems aging — CDI avg $1209
+    "15 Years": 1.6522,   # +65% vs new; peak mid-life risk; roof/HVAC/plumbing exposure — CDI avg $1539
+    "25 Years": 1.8019,   # +80% vs new; major systems near end-of-life — CDI avg $1678
+    "40 Years": 1.8191,   # +82% vs new; PEAK market rate tier — CDI avg $1694
+    "70 Years": 1.7889,   # +79% vs new; slightly below 40yr peak due to survivor bias — CDI avg $1666
+}
 
 
 @dataclass
@@ -47,31 +107,17 @@ class HomeInsuranceQuote:
 
 class HomeInsuranceCalculator:
     def __init__(self):
-        self._base_rates: pd.DataFrame = None
-        self._age_factors: pd.DataFrame = None
-        self._deductible_factors: pd.DataFrame = None
         self._county_factors: pd.DataFrame = None
-        self._endorsements: pd.DataFrame = None
 
     def _load(self):
-        self._base_rates = pd.read_csv(
-            os.path.join(_DATA_DIR, "base_rates.csv"), index_col="coverage_type"
-        )
-        self._age_factors = pd.read_csv(
-            os.path.join(_DATA_DIR, "age_factors.csv"), index_col="age_of_home"
-        )
-        self._deductible_factors = pd.read_csv(
-            os.path.join(_DATA_DIR, "deductible_factors.csv"), index_col="deductible"
-        )
-        self._county_factors = pd.read_csv(
-            os.path.join(_DATA_DIR, "county_factors.csv"), index_col="county"
-        )
-        self._endorsements = pd.read_csv(
-            os.path.join(_DATA_DIR, "endorsements.csv"), index_col="code"
+        self._county_factors = (
+            StorageService()
+            .get_collection_as_dataframe("home_county_factors")
+            .set_index("county")
         )
 
     def _ensure_loaded(self):
-        if self._base_rates is None:
+        if self._county_factors is None:
             self._load()
 
     def calculate(self, input: HomeInsuranceInput) -> HomeInsuranceQuote:
@@ -87,9 +133,9 @@ class HomeInsuranceCalculator:
             )
 
         # Base rate
-        if coverage_type not in self._base_rates.index:
+        if coverage_type not in _BASE_RATES:
             raise ValueError(f"No base rate found for coverage type '{coverage_type}'")
-        base_rate_per_1k = float(self._base_rates.loc[coverage_type, "base_rate_per_1k"])
+        base_rate_per_1k = _BASE_RATES[coverage_type]
 
         # Age factor — only for HOMEOWNERS and MOBILEHOME
         age_factor = 1.0
@@ -99,22 +145,20 @@ class HomeInsuranceCalculator:
                     f"age_of_home is required for coverage type '{coverage_type}'"
                 )
             age_key = input.age_of_home.strip()
-            if age_key not in self._age_factors.index:
+            if age_key not in _AGE_FACTORS:
                 raise ValueError(
                     f"Invalid age_of_home '{age_key}'. "
-                    f"Valid options: {list(self._age_factors.index)}"
+                    f"Valid options: {list(_AGE_FACTORS)}"
                 )
-            age_factor = float(self._age_factors.loc[age_key, "factor"])
+            age_factor = _AGE_FACTORS[age_key]
 
         # Deductible factor
-        if input.deductible not in self._deductible_factors.index:
+        if input.deductible not in _DEDUCTIBLE_FACTORS:
             raise ValueError(
                 f"Invalid deductible '{input.deductible}'. "
-                f"Valid options: {list(self._deductible_factors.index)}"
+                f"Valid options: {list(_DEDUCTIBLE_FACTORS)}"
             )
-        deductible_factor = float(
-            self._deductible_factors.loc[input.deductible, "factor"]
-        )
+        deductible_factor = _DEDUCTIBLE_FACTORS[input.deductible]
 
         # County factor
         if county not in self._county_factors.index:
@@ -140,25 +184,24 @@ class HomeInsuranceCalculator:
         endorsements_applied = []
         for code in input.endorsements:
             code_upper = code.upper()
-            if code_upper not in self._endorsements.index:
+            if code_upper not in _ENDORSEMENTS:
                 raise ValueError(
                     f"Unknown endorsement code '{code_upper}'. "
-                    f"Valid codes: {sorted(self._endorsements.index.tolist())}"
+                    f"Valid codes: {sorted(_ENDORSEMENTS)}"
                 )
-            row = self._endorsements.loc[code_upper]
-            applies_to_raw = str(row["applies_to"])
+            endt = _ENDORSEMENTS[code_upper]
             applies_to_set = (
                 _VALID_COVERAGE_TYPES
-                if applies_to_raw.upper() == "ALL"
-                else {t.strip() for t in applies_to_raw.split("|")}
+                if endt.applies_to.upper() == "ALL"
+                else {t.strip() for t in endt.applies_to.split("|")}
             )
             if coverage_type not in applies_to_set:
                 raise ValueError(
                     f"Endorsement '{code_upper}' does not apply to coverage type '{coverage_type}'. "
                     f"Applies to: {sorted(applies_to_set)}"
                 )
-            pricing_method = str(row["pricing_method"])
-            rate = float(row["rate"])
+            pricing_method = endt.pricing_method
+            rate = endt.rate
             if pricing_method == "percent_of_base":
                 add_on = round(base_annual_premium * rate, 2)
             elif pricing_method == "percent_of_coverage_c":
@@ -177,7 +220,7 @@ class HomeInsuranceCalculator:
             endorsement_premium = round(endorsement_premium + add_on, 2)
             endorsements_applied.append({
                 "code": code_upper,
-                "name": str(row["name"]),
+                "name": endt.name,
                 "pricing_method": pricing_method,
                 "rate": rate,
                 "premium": add_on,
@@ -216,6 +259,7 @@ class HomeInsuranceCalculator:
 
 
 _calculator = HomeInsuranceCalculator()
+_calculator._ensure_loaded()
 
 
 def calculate_home_insurance(
@@ -257,13 +301,12 @@ def calculate_home_insurance(
 
 def get_deductible_factor(deductible: int) -> float:
     """Return the deductible factor for a given deductible amount (1000 = 1.000 baseline)."""
-    _calculator._ensure_loaded()
-    if deductible not in _calculator._deductible_factors.index:
+    if deductible not in _DEDUCTIBLE_FACTORS:
         raise ValueError(
             f"Invalid deductible '{deductible}'. "
-            f"Valid options: {list(_calculator._deductible_factors.index)}"
+            f"Valid options: {list(_DEDUCTIBLE_FACTORS)}"
         )
-    return float(_calculator._deductible_factors.loc[deductible, "factor"])
+    return _DEDUCTIBLE_FACTORS[deductible]
 
 
 if __name__ == "__main__":

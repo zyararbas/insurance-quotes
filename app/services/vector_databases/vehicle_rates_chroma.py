@@ -4,9 +4,34 @@ import chromadb
 import shutil
 import time
 import re
-import ast
 from chromadb.utils import embedding_functions
-from typing import  Optional 
+from typing import Optional
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
+
+_CHROMA_LOCAL_PATH = "./vehicle_rates_chroma_db"
+_CHROMA_S3_LOCAL_CACHE = _CHROMA_LOCAL_PATH
+_CHROMA_S3_BUCKET_DEFAULT = "coveragecompassai-docs"
+_CHROMA_S3_PREFIX_DEFAULT = "data/vehicle_rates_chroma_db"
+
+
+def _download_chroma_from_s3(bucket: str, prefix: str, local_dir: str) -> None:
+    import boto3
+    prefix = prefix.rstrip("/") + "/"
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+    print(f"[Chroma] Downloading s3://{bucket}/{prefix} → {local_dir}")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            rel = key[len(prefix):]
+            if not rel:
+                continue
+            dest = os.path.join(local_dir, rel)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            s3.download_file(bucket, key, dest)
+    print(f"[Chroma] Download complete.")
 MODEL_STOP_WORDS = {
     'class', 'series', 'sedan', 'suv', 'coupe', 'ev', 'hybrid', 
     'benz', 'na', 'n', 'a', '-', 'dr', '4d', '2d'
@@ -299,13 +324,33 @@ def initialize_vehicle_rates_chromadb() -> None:
     """
     Initialize the global VehicleRatesChroma instance.
     Should be called once at application startup.
+
+    Resolution order:
+      1. Local path ./vehicle_rates_chroma_db — used if it exists (dev / pre-baked image)
+      2. S3 download → ./vehicle_rates_chroma_db — fallback for cloud deployments
+         Defaults to s3://coveragecompassai-docs/data/vehicle_rates_chroma_db; override via CHROMA_S3_BUCKET / CHROMA_S3_PREFIX env vars.
     """
     global _vehicle_rates_chromadb_instance
-    if _vehicle_rates_chromadb_instance is None:
-        _vehicle_rates_chromadb_instance = VehicleRatesChromaDB(ratings_csv_path=None, db_folder="./vehicle_rates_chroma_db", force_reindex=False)
-        print("Global VehicleRatesChromaDB initialized.")
-    else:
+    if _vehicle_rates_chromadb_instance is not None:
         print("Global VehicleRatesChromaDB already initialized.")
+        return
+
+    if os.path.exists(_CHROMA_LOCAL_PATH):
+        print(f"[Chroma] Using local store at {_CHROMA_LOCAL_PATH}")
+        db_folder = _CHROMA_LOCAL_PATH
+    else:
+        s3_bucket = os.getenv("CHROMA_S3_BUCKET", _CHROMA_S3_BUCKET_DEFAULT)
+        s3_prefix = os.getenv("CHROMA_S3_PREFIX", _CHROMA_S3_PREFIX_DEFAULT)
+        if not os.path.exists(_CHROMA_S3_LOCAL_CACHE):
+            _download_chroma_from_s3(s3_bucket, s3_prefix, _CHROMA_S3_LOCAL_CACHE)
+        else:
+            print(f"[Chroma] Using cached S3 download at {_CHROMA_S3_LOCAL_CACHE}")
+        db_folder = _CHROMA_S3_LOCAL_CACHE
+
+    _vehicle_rates_chromadb_instance = VehicleRatesChromaDB(
+        ratings_csv_path=None, db_folder=db_folder, force_reindex=False
+    )
+    print("Global VehicleRatesChromaDB initialized.")
 
 def get_vehicle_rates_chromadb() -> 'VehicleRatesChromaDB':
     """

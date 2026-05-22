@@ -323,7 +323,7 @@ if __name__ == "__main__":
 
     county_avgs = compute_county_factors(
         OUT,
-        os.path.join(DATA_DIR, "county_factors.csv"),
+        os.path.join(DATA_DIR, "data", "home_county_factors.csv"),
         BASE_RATE, AGE_FACTOR, DED_FACTOR
     )
     age_avgs = compute_age_factors(

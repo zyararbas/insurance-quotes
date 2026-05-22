@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import health, insurance_quotes
+from app.services.vector_databases.vehicle_rates_chroma import initialize_vehicle_rates_chromadb
 
 
 app = FastAPI(
@@ -31,6 +32,9 @@ API_PREFIX = "/insurance-quotes"
 # Include the policy routes
 app.include_router(health.router, prefix=API_PREFIX,tags=["Auto Insurance Quote Management Health"])
 app.include_router(insurance_quotes.router, prefix=API_PREFIX, tags=["Insurance Quotes"])
+
+initialize_vehicle_rates_chromadb()
+
 
 @app.get("/insurance-quotes")
 async def root():

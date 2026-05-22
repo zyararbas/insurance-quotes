@@ -9,8 +9,8 @@ WORKDIR /app
 # This is done early to leverage Docker's caching for dependencies
 COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Install all dependencies; torch+cpu is resolved first from the PyTorch index
+RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
 
 # # Copy the rest of the application code into the container at /app
 COPY . .
