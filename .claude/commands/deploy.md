@@ -1,46 +1,36 @@
-Build the Docker image for linux/amd64, push it to AWS ECR us-east-1, and force a new deployment on the ECS service. Run each step sequentially and stop immediately if any step fails.
+---
+description: Release lifecycle orchestrator — runs the deploy phases in order with gates
+---
 
-## Constants
+You are running the **release lifecycle** for the insurance-quotes service. It is composed
+of five phase commands; this orchestrator runs them in order and enforces the flow.
 
-| Variable | Value |
-|---|---|
-| REGION | `us-east-1` |
-| ECR_REGISTRY | `889572107296.dkr.ecr.us-east-1.amazonaws.com` |
-| ECR_IMAGE | `889572107296.dkr.ecr.us-east-1.amazonaws.com/insurance-quotes-app:latest` |
-| LOCAL_TAG | `insurance-quotes:latest` |
-| CLUSTER | `SharedResourcesStack-coveragecompassaiclusterDAA01724-zSMoczm4Emoz` |
-| SERVICE | `InsuranceQuotesStack-InsuranceQuotesServiceCED71145-OYElk15TeQ6U` |
+Execute each phase by invoking its slash command (via the Skill tool), in this order. Treat
+every phase's own STOP/GATE rules as binding. If any phase reports NO-GO / NOT APPROVED /
+a failure, **halt the lifecycle immediately** and report — do not run later phases.
 
-## Steps
+Track progress with TodoWrite, one todo per phase.
 
-### 1. ECR Login
-```bash
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 889572107296.dkr.ecr.us-east-1.amazonaws.com
-```
+1. `/deploy:preflight` — DEV checks (git status, `.env` guard, import). Continue only on GO.
+2. `/deploy:smoke` — smoke tests + human approval gate. Continue only on APPROVED.
+3. `/deploy:git` — commit + push (confirm before push).
+4. `/deploy:image` — docker build, tag, ECR login, push `latest` (confirm before push).
+5. `/deploy:release` — ECS rollout (approval-gated automated force-deploy, or manual).
 
-### 2. Build (linux/amd64, no cache)
-```bash
-docker buildx build --no-cache --platform linux/amd64 -t insurance-quotes:latest .
-```
+Rules:
+- Do not skip a phase or reorder them.
+- Do not self-approve the smoke gate or the release gate — those require explicit human "yes".
+- Never stage or push `.env`.
+- The ECS cluster is SHARED — the release phase must guard on the `insurance-quotes-app`
+  image before touching the service.
 
-### 3. Tag for ECR
-```bash
-docker tag insurance-quotes:latest 889572107296.dkr.ecr.us-east-1.amazonaws.com/insurance-quotes-app:latest
-```
+### Close out
+When phase 5 finishes, summarize what shipped: commit hash, image tag(s) + digest, and the
+deployment result (rollout state + running/desired, or "manual handoff").
 
-### 4. Push to ECR
-```bash
-docker push 889572107296.dkr.ecr.us-east-1.amazonaws.com/insurance-quotes-app:latest
-```
+Individual phases can also be run standalone, e.g. `/deploy:image` to rebuild and push without
+re-running tests, or `/deploy:release` to roll out an already-pushed image.
 
-### 5. Force new ECS deployment
-```bash
-aws ecs update-service \
-  --region us-east-1 \
-  --cluster SharedResourcesStack-coveragecompassaiclusterDAA01724-zSMoczm4Emoz \
-  --service InsuranceQuotesStack-InsuranceQuotesServiceCED71145-OYElk15TeQ6U \
-  --force-new-deployment
-```
-
-### 6. Confirm deployment started
-After the update-service call succeeds, report the service ARN, running/pending task counts, and deployment status from the JSON response so the user can confirm the rollout is in progress.
+Infra coordinates (ECR repo, ECS cluster/service, region) live in
+`.claude/commands/deploy/config.md` — the single source of truth the phases read from. There
+is no `/deploy:config` to run; it is a reference file.
