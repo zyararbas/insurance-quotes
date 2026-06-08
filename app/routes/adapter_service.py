@@ -15,6 +15,23 @@ from app.models.models import (
 
 from app.routes.min_recommended_max_coverages import COVERAGES
 
+# California ZIP codes range from 90001 to 96162. If the extracted zip is missing
+# or falls outside this range, fall back to a default CA zip for rating.
+CA_ZIP_MIN = 90001
+CA_ZIP_MAX = 96162
+DEFAULT_CA_ZIP = "94101"
+
+
+def normalize_ca_zip(zip_code: str) -> str:
+    """Returns the zip if it is a valid California zip, otherwise the default CA zip."""
+    try:
+        if CA_ZIP_MIN <= int(zip_code) <= CA_ZIP_MAX:
+            return zip_code
+    except (TypeError, ValueError):
+        pass
+    return DEFAULT_CA_ZIP
+
+
 class AdapterService:
     """
     A service class to adapt incoming quote payloads into the internal
@@ -186,6 +203,9 @@ class AdapterService:
         if state_info != "CA":
             state_info = "CA"
             zip_code = payload.get("additional_info", {}).get("general_questions", {}).get("zip_code", "")
+
+        # Default to a CA zip when the extracted zip is missing or outside California (90001-96162).
+        zip_code = normalize_ca_zip(zip_code)
 
         for vehicle_data in additional_vehicles_info:
             vehicle = self._extract_vehicle(vehicle_data)
