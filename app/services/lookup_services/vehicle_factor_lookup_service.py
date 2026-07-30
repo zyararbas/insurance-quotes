@@ -1,9 +1,10 @@
 import pandas as pd
 import logging
 from typing import Dict, List, Optional
-from app.utils.data_loader import DataLoader        
+from app.utils.data_loader import DataLoader
 from app.models.models import Vehicle, Usage
 from app.models.models import RatingInput
+from app.services.lookup_services.vehicle_lookup_service import VehicleLookupService
 # from app.services.vector_databases.vehicle_rates_search import get_vehicle_rates_db 
 from app.services.vector_databases.vehicle_rates_chroma import get_vehicle_rates_chromadb
 logger = logging.getLogger(__name__)
@@ -17,64 +18,71 @@ class VehicleFactorLookupService:
     def __init__(self, carrier_config: dict):
         self.carrier_config = carrier_config
         self.data_loader = DataLoader()
-        
-        # Vehicle rating tables
-        self.vehicle_rating_groups: pd.DataFrame = None
+        # Tier-1 exact rating-group lookups go straight to MongoDB (no in-memory
+        # copy of the whole vehicle-rates collection).
+        self.vehicle_lookup_service = VehicleLookupService()
+
+        # Small hard-coded factor tables (loaded lazily via initialize()).
         self.fallback_vehicle_rating_groups: pd.DataFrame = None
         self.model_year_factors: pd.DataFrame = None
         self.lrg_factors: pd.DataFrame = None
         # self.vehicle_rates_vector_db = get_vehicle_rates_db()
         self.vehicle_rates_chromadb = get_vehicle_rates_chromadb()
+
     def initialize(self):
-        """Loads all vehicle factor data tables."""
-        self.vehicle_rating_groups = self.data_loader.load_vehicle_ratings_groups()
+        """Loads the small in-memory factor tables (not the vehicle-rates collection)."""
         self.fallback_vehicle_rating_groups = self.data_loader.load_fallback_vehicle_rating_groups()
         self.model_year_factors = self.data_loader.load_model_year_factors()
         self.lrg_factors = self.data_loader.load_lrg_code_factors()
-        
+
         logger.info("VehicleFactorLookupService initialized")
+
+    def _ensure_initialized(self):
+        """Load the small factor tables on first use."""
+        if self.lrg_factors is None:
+            self.initialize()
         
     def get_vehicle_rating_groups(self, rating_input: RatingInput) -> Dict[str, int]:
         """
         Gets the vehicle rating groups (DRG, GRG, VSD, LRG) for a specific vehicle.
         Returns: {'drg': int, 'grg': int, 'vsd': str, 'lrg': int}
         """
-        if self.vehicle_rating_groups is None:
-            self.initialize()
+        self._ensure_initialized()
         vehicle = rating_input.vehicle
         try:
-            # Build the lookup key using the same format as the data loader
-            parts = [str(vehicle.year), vehicle.make, vehicle.model]
-            if vehicle.series:
-                parts.append(vehicle.series)
-            if vehicle.package:
-                parts.append(vehicle.package)
-            if vehicle.style:
-                parts.append(vehicle.style)
-            if vehicle.engine:
-                parts.append(vehicle.engine)
-            
-            lookup_key = "".join(parts).upper().replace(' ', '')
-            
-            # Try to find exact match
-            if lookup_key in self.vehicle_rating_groups.index:
-                match = self.vehicle_rating_groups.loc[lookup_key]
-                rating_groups = {
-                    'drg': int(match['drg']),
-                    'grg': int(match['grg']),
-                    'vsd': str(match['vsd']),
-                    'lrg': int(match['lrg'])
-                }
-                logger.info(f"Vehicle rating groups for {lookup_key}: {rating_groups}")
+            # Tier 1: exact keyed lookup straight in MongoDB (no full-collection load).
+            rating_groups = self.vehicle_lookup_service.find_rating_groups(
+                year=vehicle.year,
+                make=vehicle.make,
+                model=vehicle.model,
+                series=vehicle.series or '',
+                package=vehicle.package or '',
+                style=vehicle.style or '',
+                engine=vehicle.engine or '',
+            )
+            if rating_groups is not None:
+                logger.info(
+                    f"Vehicle rating groups (exact) for "
+                    f"{vehicle.year} {vehicle.make} {vehicle.model}: {rating_groups}"
+                )
                 return rating_groups
             else:
-                # Try fetching rating groups from VehicleRateSearch
-                # vehicle_rate_search = VehicleRateSearch()
-                # vehicle_rate_search.initialize()
+                # Tier 2: semantic Chroma fallback.
                 print("No search results found")
-                vin_data = vehicle.dict()
-                # search_results = self.vehicle_rates_vector_db.search_by_vin_data(vin_data) 
-                search_results = self.vehicle_rates_chromadb.search_by_vin_data(vin_data) 
+                # search_by_vin_data expects the NHTSA VIN-decode shape, not the
+                # Vehicle model shape. Map explicitly; the Vehicle's `series` is
+                # the trim, and body_class/doors are unknown for a manually
+                # specified vehicle (handled as optional downstream).
+                vin_data = {
+                    'year': vehicle.year,
+                    'make': vehicle.make,
+                    'model': vehicle.model,
+                    'trim': vehicle.series,
+                    'style': vehicle.style,
+                    'engine': vehicle.engine,
+                }
+                # search_results = self.vehicle_rates_vector_db.search_by_vin_data(vin_data)
+                search_results = self.vehicle_rates_chromadb.search_by_vin_data(vin_data)
                 if search_results:
                     top_result = search_results[0]
                     rating_groups = {
@@ -83,33 +91,62 @@ class VehicleFactorLookupService:
                         'vsd': str(top_result['vsd']),
                         'lrg': int(top_result['lrg']) 
                     }
-                    logger.info(f"Vehicle rating groups for {lookup_key}: {rating_groups}")
+                    logger.info(
+                        f"Vehicle rating groups (semantic) for "
+                        f"{vehicle.year} {vehicle.make} {vehicle.model}: {rating_groups}"
+                    )
                     return rating_groups
-                else:
-                    # Try fallback with fewer components
-                    fallback_key = f"{vehicle.year}_{vehicle.make}_{vehicle.model}"
-                    fallback_match = self.fallback_vehicle_rating_groups[
-                        self.fallback_vehicle_rating_groups['vehicle_key'] == fallback_key
-                    ]
-                
-                if not fallback_match.empty:
-                    rating_groups = {
-                        'drg': int(fallback_match['drg'].iloc[0]),
-                        'grg': int(fallback_match['grg'].iloc[0]),
-                        'vsd': str(fallback_match['vsd'].iloc[0]),
-                        'lrg': int(fallback_match['lrg'].iloc[0])
-                    }
-                    logger.info(f"Fallback vehicle rating groups for {fallback_key}: {rating_groups}")
-                    return rating_groups
-                    
+                # Tier 3: MSRP-bucket fallback. The fallback table maps an MSRP
+                # range to rating groups, so it only applies when the vehicle
+                # carries an msrp.
+                msrp_match = self._match_msrp_fallback(vehicle.msrp)
+                if msrp_match is not None:
+                    logger.info(
+                        f"MSRP fallback rating groups for msrp={vehicle.msrp}: {msrp_match}"
+                    )
+                    return msrp_match
+
                 # If still no match, use default values
-                logger.warning(f"No vehicle rating groups found for {lookup_key}, using defaults")
+                logger.warning(
+                    f"No vehicle rating groups found for "
+                    f"{vehicle.year} {vehicle.make} {vehicle.model} (msrp={vehicle.msrp}), using defaults"
+                )
                 return {'drg': 1, 'grg': 1, 'vsd': '1', 'lrg': 1}
                 
         except Exception as e:
             logger.error(f"Error getting vehicle rating groups: {e}")
             return {'drg': 1, 'grg': 1, 'vsd': '1', 'lrg': 1}
-            
+
+    def _match_msrp_fallback(self, msrp: Optional[float]) -> Optional[Dict]:
+        """
+        Resolve rating groups from the MSRP-bucket fallback table.
+
+        Returns the rating groups for the bucket whose [MSRP_min, MSRP_max]
+        range contains ``msrp``. An MSRP above the top bucket clamps to the
+        highest bucket. Returns None when msrp is missing or no bucket applies.
+        """
+        if msrp is None:
+            return None
+
+        self._ensure_initialized()
+        table = self.fallback_vehicle_rating_groups
+
+        match = table[(table['MSRP_min'] <= msrp) & (msrp <= table['MSRP_max'])]
+        if match.empty and msrp > table['MSRP_max'].max():
+            # Above the table's top bucket — use the highest MSRP bucket.
+            match = table[table['MSRP_max'] == table['MSRP_max'].max()]
+
+        if match.empty:
+            return None
+
+        row = match.iloc[0]
+        return {
+            'drg': int(row['DRG']),
+            'grg': int(row['GRG']),
+            'vsd': str(row['VSD']),
+            'lrg': int(row['LRG']),
+        }
+
     def get_model_year_factor(self, coverage: str, year: int) -> float:
         """Gets the model year factor for a specific coverage and vehicle year."""
         if self.model_year_factors is None:
@@ -219,9 +256,8 @@ class VehicleFactorLookupService:
         Calculates all vehicle factors for the given coverages.
         Returns: {coverage: {'combined_factor': float, 'breakdown': dict}}
         """
-        if self.vehicle_rating_groups is None:
-            self.initialize()
-        vehicle = rating_input.vehicle    
+        self._ensure_initialized()
+        vehicle = rating_input.vehicle
         # Get vehicle rating groups
         rating_groups = self.get_vehicle_rating_groups(rating_input)
         

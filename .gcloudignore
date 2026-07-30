@@ -1,0 +1,16 @@
+# Controls what `gcloud builds submit` uploads as the Cloud Build context.
+#
+# IMPORTANT: when this file exists, gcloud uses it INSTEAD of .gitignore. We must
+# NOT exclude vehicle_rates_chroma_db/ here (it is gitignored, but the Dockerfile
+# bakes it into the image, so Cloud Build needs it in the upload). The image
+# itself is still slimmed by .dockerignore during `docker build`.
+
+.git/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.pytest_cache/
+csv_refactor_log.txt

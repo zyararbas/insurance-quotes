@@ -247,60 +247,26 @@ class VehicleSearchService:
         return all(criteria.get(field) for field in required_fields)
     
     def _perform_vehicle_search(
-        self, 
-        criteria: Dict[str, Any], 
+        self,
+        criteria: Dict[str, Any],
         series: Optional[str] = None,
         package: Optional[str] = None,
         style: Optional[str] = None,
         engine: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Perform vehicle search using the lookup service."""
-        # Get base search results
-        search_results = self.vehicle_lookup_service.search_vehicles(
+        # All filters are pushed down into the MongoDB query so only the
+        # matching rows are returned (no in-Python post-filtering).
+        return self.vehicle_lookup_service.search_vehicles(
             make=criteria.get('make'),
             model=criteria.get('model'),
-            year=criteria.get('year')
+            year=criteria.get('year'),
+            series=series,
+            package=package,
+            style=style,
+            engine=engine,
         )
-        
-        # Apply additional filters if provided
-        if series or package or style or engine:
-            search_results = self._filter_results(
-                search_results, series, package, style, engine
-            )
-        
-        return search_results
-    
-    def _filter_results(
-        self,
-        results: List[Dict[str, Any]],
-        series: Optional[str] = None,
-        package: Optional[str] = None,
-        style: Optional[str] = None,
-        engine: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
-        """Filter search results based on additional criteria."""
-        filtered_results = []
-        
-        for vehicle in results:
-            matches = True
-            
-            if series and vehicle.get('series', '').upper() != series.upper():
-                matches = False
-            
-            if package and vehicle.get('package', '').upper() != package.upper():
-                matches = False
-            
-            if style and vehicle.get('style', '').upper() != style.upper():
-                matches = False
-            
-            if engine and vehicle.get('engine', '').upper() != engine.upper():
-                matches = False
-            
-            if matches:
-                filtered_results.append(vehicle)
-        
-        return filtered_results
-    
+
     def _format_search_results(
         self,
         vin_data: Optional[Dict[str, Any]],
@@ -371,19 +337,10 @@ class VehicleSearchService:
                 logger.error("Missing required criteria for options lookup")
                 return []
             
-            # Get all vehicles for the make/model/year
-            vehicles = self.vehicle_lookup_service.search_vehicles(
-                make=make, model=model, year=year
+            # Distinct values for the requested option, resolved in MongoDB.
+            return self.vehicle_lookup_service.get_distinct_options(
+                option_type, year=year, make=make, model=model
             )
-            
-            # Extract unique options
-            options = set()
-            for vehicle in vehicles:
-                option_value = vehicle.get(option_type, '')
-                if option_value and option_value.strip():
-                    options.add(option_value.strip())
-            
-            return sorted(list(options))
             
         except Exception as e:
             logger.error(f"Failed to get available options: {e}")

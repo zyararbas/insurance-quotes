@@ -28,6 +28,11 @@ class StorageService:
 
     def __init__(self):
         if not hasattr(self, '_initialized'): # Ensure __init__ is called only once for singleton
+            # MONGO_URI (a full mongodb:// or mongodb+srv:// connection string) takes
+            # precedence when set — required for MongoDB Atlas, which is reached by
+            # SRV URI rather than host/port. Falls back to the discrete host/port
+            # vars for a local/self-hosted Mongo.
+            self.MONGO_URI = os.environ.get("MONGO_URI", "")
             self.MONGO_HOST = os.environ.get("MONGO_HOST", "localhost")
             self.MONGO_PORT = int(os.environ.get("MONGO_PORT", 27017))
             self.MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME", "coveragecompassai")
@@ -41,12 +46,15 @@ class StorageService:
 
     def connect(self):
         try:
-            self._client = MongoClient(
-                self.MONGO_HOST, 
-                self.MONGO_PORT,
-                username=self.MONGO_USER,
-                password=self.MONGO_PASSWORD
-                )
+            if self.MONGO_URI:
+                self._client = MongoClient(self.MONGO_URI)
+            else:
+                self._client = MongoClient(
+                    self.MONGO_HOST,
+                    self.MONGO_PORT,
+                    username=self.MONGO_USER,
+                    password=self.MONGO_PASSWORD
+                    )
             # The ismaster command is cheap and does not require auth.
             self._client.admin.command('ismaster')
             self._db = self._client[self.MONGO_DB_NAME]
@@ -64,15 +72,30 @@ class StorageService:
             self._client.close()
             logging.info("MongoDB connection closed.")
 
-    def find(self, query: dict, collection_name: str):
+    def find(self, query: dict, collection_name: str, collation: dict = None):
         if self._db is None:
             raise ConnectionError("MongoDB database not initialized. Call connect() first.")
         try:
             collection = self._db[collection_name]
             logging.info(f"Finding documents in collection '{collection_name}' with query: {query}")
-            return list(collection.find(query))
+            cursor = collection.find(query)
+            if collation is not None:
+                # e.g. {'locale': 'en', 'strength': 2} for case-insensitive equality
+                cursor = cursor.collation(collation)
+            return list(cursor)
         except PyMongoError as e:
             logging.error(f"Error finding documents in collection {collection_name}: {e}")
+            return []
+
+    def distinct(self, field: str, query: dict, collection_name: str):
+        if self._db is None:
+            raise ConnectionError("MongoDB database not initialized. Call connect() first.")
+        try:
+            collection = self._db[collection_name]
+            logging.info(f"Distinct '{field}' in collection '{collection_name}' with query: {query}")
+            return collection.distinct(field, query)
+        except PyMongoError as e:
+            logging.error(f"Error getting distinct '{field}' in collection {collection_name}: {e}")
             return []
 
     def insert_one(self, document: dict, collection_name: str):

@@ -44,4 +44,6 @@ ENV PYTHONPATH=/app
 ENV UVICORN_PORT=8002
 ENV UVICORN_HOST=0.0.0.0
 
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8002", "-t", "180"]
+# --forwarded-allow-ips="*" so gunicorn trusts Cloud Run's X-Forwarded-Proto and
+# emits https (not http) redirects (otherwise POST trailing-slash redirects 405).
+CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8002", "-t", "180", "--forwarded-allow-ips=*"]

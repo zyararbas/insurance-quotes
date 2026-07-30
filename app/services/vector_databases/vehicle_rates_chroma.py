@@ -161,6 +161,12 @@ class VehicleRatesChromaDB:
         # Split by space, filter out empty tokens and stop words
         return set(filter(lambda t: t and t not in MODEL_STOP_WORDS, tokens.split()))
 
+    @staticmethod
+    def _case_variants(value):
+        """Common casing variants of a string, for case-insensitive exact filtering."""
+        s = str(value).strip()
+        return list({s, s.upper(), s.lower(), s.title(), s.capitalize()})
+
     def _jaccard_similarity(self, set_a, set_b):
         """Calculates Jaccard similarity between two sets."""
         if not set_a and not set_b:
@@ -271,10 +277,19 @@ class VehicleRatesChromaDB:
         year_str = str(vin_data.get('year', ''))
         make = vin_data.get('make', '')
         model = vin_data.get('model', '')
-        style = f"{vin_data.get('body_class')} {vin_data.get('style', '')} {(vin_data.get('doors', ''))}D"
+        # body_class and doors only exist for NHTSA VIN decodes, not manually
+        # specified vehicles — build the style from whatever is present so we
+        # don't emit literal "None" tokens into the query.
+        style_parts = [
+            vin_data.get('body_class') or '',
+            vin_data.get('style') or '',
+            f"{vin_data.get('doors')}D" if vin_data.get('doors') else '',
+        ]
+        style = ' '.join(p for p in style_parts if p).strip()
         style = style.replace("SED", "sedan")
-        series = vin_data.get('trim', '')
-        engine = vin_data.get('engine', '') 
+        # Series/trim may arrive under either key.
+        series = vin_data.get('series') or vin_data.get('trim') or ''
+        engine = vin_data.get('engine', '')
 
         query = f"""
         Find me exact or similar vehicles like this year: {year_str} make: {make} model: {model} style: {style} series: {series} engine: {engine} doors: {vin_data.get('doors', '')},  
@@ -288,6 +303,7 @@ class VehicleRatesChromaDB:
                 'make': make,
                 'model': model,
                 'series': series,
+                'trim': series,  # query_vehicles' trim boost reads the 'trim' key
                 'style': style,
                 'engine': engine
             }
@@ -301,9 +317,11 @@ class VehicleRatesChromaDB:
 
             print(f"\nUsing Search Query: '{query}' (with boosting: {weights})")
             
-            # Use strict filtering for Make and Model
-            where = {"make": make} if make else None
-           
+            # Chroma metadata matching is exact, so a casing mismatch between the
+            # query make and the stored make silently returns zero hits. Match
+            # against common casing variants to stay case-insensitive.
+            where = {"make": {"$in": self._case_variants(make)}} if make else None
+
             return self.query_vehicles(
                 query, 
                 where_clause=where,
