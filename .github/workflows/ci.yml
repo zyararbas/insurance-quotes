@@ -23,8 +23,11 @@
 #     .gitignore keeps out of the repo, falling back to an S3 download that
 #     needs credentials. There is nothing to import in a checkout.
 #
-# What is left still catches real things -- the lint report below found two
-# genuine defects on its first run, documented in ruff.toml.
+# What is left still catches real things: the lint job found three genuine
+# defects on its first runs -- a module that did not parse, an undefined name
+# reachable from the public entry point, and a third that only became visible
+# once the first was fixed, since ruff cannot resolve names in a file it cannot
+# parse. All three are fixed, so both jobs below now block.
 #
 # Branch protection is what would actually *block* a merge on failure, and it
 # is unavailable on the current GitHub plan (the API returns 403 on the private
@@ -52,26 +55,14 @@ jobs:
       # Pinned to the version ruff.toml was validated against, matching cc-ai.
       - run: pip install ruff==0.16.5
 
-      # Non-blocking, because it is red on main today and will stay red until
-      # the nine findings in ruff.toml's header are fixed. Making it blocking
-      # now would paint every PR red and teach everyone to ignore CI -- the
-      # same call cc-ui made about eslint and cc-ai about pip-audit.
+      # Blocking. It was non-blocking when this workflow was introduced,
+      # because `ruff check .` reported nine real defects and turning every PR
+      # red on day one teaches people to ignore CI. Those are fixed and it
+      # passes clean, so a finding in a PR is a new one. See ruff.toml for what
+      # is ignored and why none of it masks a defect.
       #
-      # Unlike those two, though, the report here is short and every line is a
-      # real defect, not style: eight of the nine are a module that does not
-      # parse, and the ninth is an undefined name reachable from a public
-      # entry point. Read the artifact. This job should become blocking in the
-      # PR that fixes them, not in a later cleanup of this file.
-      - name: ruff (non-blocking -- see comment above)
-        continue-on-error: true
-        run: ruff check . --output-format concise 2>&1 | tee ruff-report.txt
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ruff-report
-          path: ruff-report.txt
-          retention-days: 90
+      # Do not demote this back to reach green.
+      - run: ruff check .
 
   build:
     name: build
@@ -84,19 +75,17 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       # Blocking, and it needs no dependencies installed -- compileall only
-      # parses. Two files are excluded by name because they genuinely do not
-      # parse today (see ruff.toml for the bug and why nothing breaks in
-      # production yet). Naming them here rather than dropping the job keeps
-      # every *other* module gated: a syntax error committed to a third file
-      # fails this build, which is the control worth having, and it is
-      # otherwise invisible in a repo whose modules are reached by runtime
-      # dispatch rather than at import.
+      # parses. This carried a `-x` exclusion for two files that genuinely did
+      # not parse; both are resolved (one fixed, one deleted as a byte-identical
+      # duplicate), so the exclusion is gone and every module is gated.
       #
-      # Verified both directions against this commit: exit 1 without the
-      # exclusion, naming exactly those two files, and exit 0 with it. Delete
-      # the -x argument in the PR that fixes them.
-      - name: every module parses (except the two known-broken files)
-        run: python -m compileall -q -x "vehicle_rates_vector( copy)?\.py$" app main.py
+      # Worth keeping even though ruff's E9 also catches syntax errors: this is
+      # CPython's own parser on the exact version the Dockerfile runs, and it is
+      # the check that matters in a repo whose modules are reached by runtime
+      # dispatch rather than at import, so a parse error in one would otherwise
+      # surface only when a request happened to hit it.
+      - name: every module parses
+        run: python -m compileall -q app main.py
 
   dependency-audit:
     name: dependency-audit

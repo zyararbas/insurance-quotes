@@ -238,7 +238,7 @@ class HomeQuoteResponse(BaseModel):
     coverage_amount: float
     deductible: int
     age_of_home: Optional[str]
-    coverage_package: dict   # coverage_a, coverage_b, coverage_c, coverage_d
+    coverage_package: dict   # coverage_a_dwelling only; B/C/D are not derived yet
     # Factor-based estimate
     base_annual_premium: float
     endorsement_premium: float
