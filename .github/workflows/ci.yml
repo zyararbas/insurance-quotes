@@ -1,0 +1,180 @@
+# SOC 2 CC8.1 (change management): every pull request produces machine-run,
+# timestamped evidence that it was linted, parsed and scanned before merge. Job
+# names and the 90-day artifact retention match cc-ai, cc-ui, cc-corp,
+# cc-common and insurance-graph so a reviewer moving between repos reads the
+# same checks in the same order.
+#
+# Two jobs the sibling repos have are deliberately absent here, and the reasons
+# are worth stating rather than discovering:
+#
+#   * No `test` job. app/tests/home/test_home_insurance.py is a real pytest
+#     test with real assertions, but it cannot run in CI: importing
+#     app.services.calculations.home.home_insurance executes
+#     `_calculator._ensure_loaded()` at module scope, which queries the
+#     `home_county_factors` collection in MongoDB. Running it needs a live
+#     Mongo seeded with production reference data. Making that module import
+#     without a database is the prerequisite for a test job here, and is worth
+#     doing -- it is a real change to source, not something to bundle into the
+#     PR that adds CI.
+#
+#   * No boot check, unlike insurance-graph's. app/main.py calls
+#     initialize_vehicle_rates_chromadb() at module scope, which loads the
+#     ~281MB vehicle_rates_chroma_db directory that the Dockerfile bakes in and
+#     .gitignore keeps out of the repo, falling back to an S3 download that
+#     needs credentials. There is nothing to import in a checkout.
+#
+# What is left still catches real things -- the lint report below found two
+# genuine defects on its first run, documented in ruff.toml.
+#
+# Branch protection is what would actually *block* a merge on failure, and it
+# is unavailable on the current GitHub plan (the API returns 403 on the private
+# repos). Until that changes these checks are visible, not binding.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11" # matches the python:3.11-slim base in Dockerfile
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Pinned to the version ruff.toml was validated against, matching cc-ai.
+      - run: pip install ruff==0.16.5
+
+      # Non-blocking, because it is red on main today and will stay red until
+      # the nine findings in ruff.toml's header are fixed. Making it blocking
+      # now would paint every PR red and teach everyone to ignore CI -- the
+      # same call cc-ui made about eslint and cc-ai about pip-audit.
+      #
+      # Unlike those two, though, the report here is short and every line is a
+      # real defect, not style: eight of the nine are a module that does not
+      # parse, and the ninth is an undefined name reachable from a public
+      # entry point. Read the artifact. This job should become blocking in the
+      # PR that fixes them, not in a later cleanup of this file.
+      - name: ruff (non-blocking -- see comment above)
+        continue-on-error: true
+        run: ruff check . --output-format concise 2>&1 | tee ruff-report.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ruff-report
+          path: ruff-report.txt
+          retention-days: 90
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Blocking, and it needs no dependencies installed -- compileall only
+      # parses. Two files are excluded by name because they genuinely do not
+      # parse today (see ruff.toml for the bug and why nothing breaks in
+      # production yet). Naming them here rather than dropping the job keeps
+      # every *other* module gated: a syntax error committed to a third file
+      # fails this build, which is the control worth having, and it is
+      # otherwise invisible in a repo whose modules are reached by runtime
+      # dispatch rather than at import.
+      #
+      # Verified both directions against this commit: exit 1 without the
+      # exclusion, naming exactly those two files, and exit 0 with it. Delete
+      # the -x argument in the PR that fixes them.
+      - name: every module parses (except the two known-broken files)
+        run: python -m compileall -q -x "vehicle_rates_vector( copy)?\.py$" app main.py
+
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - run: pip install pip-audit==2.10.1
+
+      # --extra-index-url is required, not optional: requirements.txt pins
+      # torch==2.9.1+cpu, a local-version wheel that exists only on the PyTorch
+      # index. Without this flag pip-audit does not merely miss torch, it fails
+      # to resolve the file at all and audits nothing -- verified. The
+      # Dockerfile passes the same flag for the same reason.
+      #
+      # torch still ends up in pip-audit's "skipped" table ("Dependency not
+      # found on PyPI and could not be audited"), because the advisory lookup
+      # is PyPI-only. So this job does not cover torch. Saying so here is
+      # better than a green check that implies it does.
+      #
+      # Non-blocking, matching cc-ai: a clean audit is a dependency-upgrade
+      # pass, not something to land inside the PR that adds the scanner.
+      - name: pip-audit (non-blocking -- see comment above)
+        continue-on-error: true
+        run: >
+          pip-audit -r requirements.txt
+          --extra-index-url https://download.pytorch.org/whl/cpu
+          -f json -o pip-audit-report.json
+
+      - name: pip-audit (human-readable, for the log)
+        continue-on-error: true
+        if: always()
+        run: >
+          pip-audit -r requirements.txt
+          --extra-index-url https://download.pytorch.org/whl/cpu
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pip-audit-report
+          path: pip-audit-report.json
+          retention-days: 90
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      # Full history is needed to resolve the base..head commit range below.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: install gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      # Scoped to this PR's own commits rather than full history, matching the
+      # other repos: a baseline that suppressed pre-existing findings would
+      # have to embed the secrets themselves to match on. This catches a *new*
+      # leak at push time, which is the control worth having.
+      - name: gitleaks (scoped to this PR's commits)
+        run: |
+          gitleaks detect --source . \
+            --log-opts="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" \
+            --report-format json --report-path gitleaks-report.json -v
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+          retention-days: 90

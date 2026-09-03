@@ -1,0 +1,55 @@
+# CI lint gate (SOC 2 CC8.1). Scope is deliberately narrow, matching cc-ai's
+# ruff.toml: the goal is a control that produces a *readable* report on day
+# one, not a rewrite of the service in the same diff that introduces it.
+#
+# Unlike the sibling repos, the lint job here is non-blocking -- see
+# .github/workflows/ci.yml. The ignore list below is tuned so that what is
+# left is worth reading: 751 findings under a bare `--select E4,E7,E9,F`
+# become 9, and all 9 are real defects rather than style. Do not add to this
+# list to reach zero. Fix the nine.
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+
+# Style and hygiene codes, ignored wholesale so this PR carries zero source
+# edits and so the nine real findings are not buried. Counts as of 2026-09-03:
+#
+#   F401 / F541 / F811 / F841 / E401 / E402 / E701 / E703 / E721 / E741
+#       the usual pre-existing noise, ~727 findings.
+#   E702  15x  semicolon-separated statements, all in
+#              app/services/vehicle_search/ai_assistant_service_gemini_sdk.py.
+#
+# What deliberately remains, and what CI therefore reports every run:
+#
+#   invalid-syntax  8x  app/services/vector_databases/vehicle_rates_vector.py
+#                       and its stray "vehicle_rates_vector copy.py" sibling
+#                       do not parse. Four dict entries are missing trailing
+#                       commas (lines 97-100 and 214). Every importer of this
+#                       module is currently commented out, so nothing breaks
+#                       in production today -- but the code is unusable as
+#                       written, and `int(row['grg'], ' ')` would raise even
+#                       once the commas are added, since int()'s second
+#                       argument is a base. The " copy.py" file looks like a
+#                       stray backup that should not be tracked at all.
+#   F821            1x  app/services/calculations/home/home_insurance.py:209
+#                       references `coverage_c`, which is never a parameter of
+#                       HomeInsuranceCalculator.calculate() nor assigned
+#                       before use. Any quote carrying an endorsement priced
+#                       "percent_of_coverage_c" -- REPLACEMENT_PERSONAL_PROPERTY
+#                       is one -- raises NameError. This one is reachable from
+#                       the public entry point.
+#
+# These are not suppressed anywhere. They should go away by being fixed.
+ignore = [
+    "F401", # unused-import
+    "F541", # f-string-missing-placeholders
+    "F811", # redefined-while-unused
+    "F841", # unused-variable
+    "E401", # multiple-imports-on-one-line
+    "E402", # module-import-not-at-top-of-file
+    "E701", # multiple-statements-on-one-line-colon
+    "E702", # multiple-statements-on-one-line-semicolon
+    "E703", # useless-semicolon
+    "E721", # type-comparison
+    "E741", # ambiguous-variable-name
+]
