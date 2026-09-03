@@ -94,10 +94,17 @@ class VehicleVectorDB:
                 "style": clean(row.get('BODYSTYLE',' ')),
                 "engine": clean(row.get('ENGINE',' ')),  
                 "wheelbase": clean(row.get('WHEELBASE',' ')),
-                "grg": int(row['grg'],' ')
-                "drg": int(row['drg'],' ')
-                "vsd": int(row['vsd'],' ')
-                "lrg": int(row['lrg'],' ')
+                # These were `int(row['grg'], ' ')` with no separating commas, so
+                # the module did not parse at all. The stray second argument looks
+                # like the `row.get(col, ' ')` default idiom used on the lines
+                # above, copied into a call that takes a base, not a default --
+                # int(x, ' ') would raise even once the commas were added. The
+                # semantic_text block above reads these same four columns as
+                # row['grg'] with no default, so that is the evident intent.
+                "grg": int(row['grg']),
+                "drg": int(row['drg']),
+                "vsd": int(row['vsd']),
+                "lrg": int(row['lrg']),
             })
             ids.append(str(idx))
             
@@ -198,7 +205,11 @@ class VehicleVectorDB:
                 
                 candidate_trim_tokens = self._tokenize_model(candidate_description)
                 
-                jaccard_score_trim = self._jaccard_similarity(target_trim_tokens, candidate_trim_tokens)
+                # Was `target_trim_tokens`, which is never assigned anywhere -- while
+                # `target_description_tokens` (line 173) was assigned and never used.
+                # Same value, renamed on one side only. This was invisible until the
+                # file parsed: ruff cannot resolve names in a module it cannot parse.
+                jaccard_score_trim = self._jaccard_similarity(target_description_tokens, candidate_trim_tokens)
                 new_score -= (weights.get('trim', 0.0) * jaccard_score_trim)
 
                 reranked_candidates.append({
@@ -210,7 +221,7 @@ class VehicleVectorDB:
                     "package": meta.get('package', ' '),
                     "style": meta.get('style', ' '),
                     "engine": meta.get('engine', ' '),
-                    "wheelbase": meta.get('wheelbase', ' ')
+                    "wheelbase": meta.get('wheelbase', ' '),
                     "Match Distance": round(new_score, 4)  # Boosted Score
                 })
  

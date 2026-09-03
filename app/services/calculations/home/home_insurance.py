@@ -101,7 +101,7 @@ class HomeInsuranceQuote:
     base_annual_premium: float
     endorsement_premium: float
     endorsements_applied: List[dict]
-    coverage_package: dict   # coverage_a 
+    coverage_package: dict   # coverage_a_dwelling only -- B/C/D are not derived
     breakdown: dict
 
 
@@ -169,7 +169,9 @@ class HomeInsuranceCalculator:
         county_factor = float(self._county_factors.loc[county, "factor"])
         county_risk_tier = str(self._county_factors.loc[county, "risk_tier"])
 
-        # CDI coverage package — input is Coverage A (Dwelling); B/C/D derived by standard ratios
+        # CDI coverage package — input is Coverage A (Dwelling). B/C/D are NOT
+        # derived: nothing below computes them and coverage_package returns only
+        # coverage_a_dwelling. See the percent_of_coverage_c branch.
         coverage_a = input.coverage_amount 
 
         # Premium = (coverage_a / 1000) × base_rate × age × deductible × county
@@ -205,11 +207,28 @@ class HomeInsuranceCalculator:
             if pricing_method == "percent_of_base":
                 add_on = round(base_annual_premium * rate, 2)
             elif pricing_method == "percent_of_coverage_c":
-                # Price on Coverage C (personal property) at the same per-$1K rate as dwelling
-                coverage_c_units = coverage_c / 1000.0
-                add_on = round(
-                    coverage_c_units * base_rate_per_1k * age_factor * deductible_factor * county_factor * rate,
-                    2,
+                # This priced on `coverage_c`, which is not a parameter of this
+                # method and is never assigned -- so it raised NameError for any
+                # quote that requested it, which today means
+                # REPLACEMENT_PERSONAL_PROPERTY.
+                #
+                # There is no Coverage C anywhere in this service to price
+                # against: `coverage_package` carries coverage_a_dwelling and
+                # nothing else, despite the comments that say B/C/D are derived.
+                # Deriving it is a rating decision, not a code fix, and one ratio
+                # would not serve all four coverage types this endorsement applies
+                # to: for HOMEOWNERS and MOBILEHOME, Coverage C is a fraction of
+                # the dwelling limit; for CONDOMINIUM and RENTERS the personal
+                # property limit is the primary limit, not a derivative of one.
+                #
+                # So this raises rather than guessing a number into a quote.
+                # Replace it once the Coverage C derivation is agreed.
+                raise ValueError(
+                    f"Endorsement '{code_upper}' is priced on Coverage C "
+                    "(personal property), which this calculator does not yet "
+                    "derive. Only Coverage A (dwelling) is modelled. Remove the "
+                    "endorsement from the request, or define the Coverage C "
+                    "derivation per coverage type."
                 )
             elif pricing_method == "flat":
                 add_on = round(rate, 2)
